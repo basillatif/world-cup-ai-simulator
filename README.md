@@ -1,6 +1,13 @@
 # World Cup AI Simulator
 
 A World Cup prediction engine combining a Monte Carlo tournament simulator with a Claude-powered analyst layer.
+Goals of This Project: 
+-GitHub repo
+-Medium article
+-architecture diagram
+-LinkedIn carousel
+-short demo clip
+
 
 > **Core design principle:** GenAI is not replacing the model. It is explaining the model.
 
