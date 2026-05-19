@@ -1,10 +1,20 @@
-"""Monte Carlo World Cup tournament simulator."""
+"""Monte Carlo World Cup 2026 tournament simulator (48 teams, 12 groups).
+
+Performance design
+------------------
+`predict_probs` computes a full Poisson score matrix on every call (~0.1 ms).
+With 10 000 simulations × 135 matches each that adds up to ~180 s.
+
+The fix: pre-compute a probability lookup table for every ordered team pair
+*once* before the simulation loop (≈ 250 ms for 2 256 pairs).  The inner loop
+then does only dict look-ups and a single `rng.random()` draw per match.
+"""
 
 from __future__ import annotations
 
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -12,6 +22,10 @@ import pandas as pd
 
 from src.models.match_predictor import MatchPredictor
 
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
 
 @dataclass
 class GroupResult:
@@ -31,136 +45,208 @@ class GroupResult:
     def gd(self) -> int:
         return self.gf - self.ga
 
-    def sort_key(self) -> tuple:
-        return (self.points, self.gd, self.gf)
 
+# ---------------------------------------------------------------------------
+# Pre-computation
+# ---------------------------------------------------------------------------
+
+def _build_prob_table(
+    teams: list[str],
+    predictor: MatchPredictor,
+) -> tuple[dict[tuple[str, str], tuple[float, float, float]],
+           dict[tuple[str, str], tuple[float, float]]]:
+    """
+    Pre-compute (home_win_prob, draw_prob, away_win_prob) and
+    (lambda_home, lambda_away) for every ordered pair of teams.
+
+    Called once before the simulation loop — ~250 ms for 48 teams.
+    """
+    prob_table: dict[tuple[str, str], tuple[float, float, float]] = {}
+    goals_table: dict[tuple[str, str], tuple[float, float]] = {}
+
+    for t1 in teams:
+        for t2 in teams:
+            if t1 == t2:
+                continue
+            p = predictor.predict_probs(t1, t2, neutral=True)
+            prob_table[(t1, t2)] = (p["home_win"], p["draw"], p["away_win"])
+            goals_table[(t1, t2)] = predictor.poisson.expected_goals(t1, t2, neutral=True)
+
+    return prob_table, goals_table
+
+
+# ---------------------------------------------------------------------------
+# Group stage
+# ---------------------------------------------------------------------------
 
 def simulate_group_stage(
-    groups_df: pd.DataFrame,
-    predictor: MatchPredictor,
+    group_structure: dict[str, list[str]],
+    prob_table: dict[tuple[str, str], tuple[float, float, float]],
+    goals_table: dict[tuple[str, str], tuple[float, float]],
     rng: np.random.Generator,
-) -> dict[str, list[str]]:
-    """
-    Simulate the full group stage.
-    Returns a dict mapping group label → [1st place team, 2nd place team, 3rd, 4th].
-    """
-    standings: dict[str, list[str]] = {}
+) -> dict[str, list[GroupResult]]:
+    """Simulate group stage. Returns group → [1st…4th] GroupResult list."""
+    standings: dict[str, list[GroupResult]] = {}
 
-    for group, gdf in groups_df.groupby("group"):
-        teams = gdf["team"].tolist()
+    for group, teams in group_structure.items():
         table: dict[str, GroupResult] = {t: GroupResult(team=t) for t in teams}
 
-        # Round-robin fixtures
         for i, t1 in enumerate(teams):
             for t2 in teams[i + 1:]:
-                result = predictor.simulate_match(t1, t2, neutral=True, rng=rng)
-                _update_table(table, result)
+                hw, d, aw = prob_table[(t1, t2)]
+                lam_h, lam_a = goals_table[(t1, t2)]
 
-        # Sort: points → GD → GF → random tiebreak
+                # Outcome from blended probs (single rng.random() call)
+                r = rng.random()
+                if r < hw:
+                    outcome = "home_win"
+                elif r < hw + d:
+                    outcome = "draw"
+                else:
+                    outcome = "away_win"
+
+                # Scoreline sampled from Poisson (for GD / GF tiebreakers)
+                hg = int(rng.poisson(lam_h))
+                ag = int(rng.poisson(lam_a))
+
+                # Force scoreline to be consistent with blended outcome
+                if outcome == "home_win" and hg <= ag:
+                    hg, ag = ag + 1, max(ag - 1, 0)
+                elif outcome == "away_win" and ag <= hg:
+                    ag, hg = hg + 1, max(hg - 1, 0)
+                elif outcome == "draw":
+                    ag = hg  # make it a draw
+
+                _update_table(table, t1, t2, hg, ag)
+
         ranked = sorted(
             table.values(),
             key=lambda r: (r.points, r.gd, r.gf, random.random()),
             reverse=True,
         )
-        standings[group] = [r.team for r in ranked]
+        standings[group] = ranked
 
     return standings
 
 
-def _update_table(table: dict[str, GroupResult], result: dict) -> None:
-    h, a = result["home_team"], result["away_team"]
-    hg, ag = result["home_goals"], result["away_goals"]
-
-    table[h].played += 1
-    table[a].played += 1
-    table[h].gf += hg
-    table[h].ga += ag
-    table[a].gf += ag
-    table[a].ga += hg
+def _update_table(
+    table: dict[str, GroupResult],
+    home: str,
+    away: str,
+    hg: int,
+    ag: int,
+) -> None:
+    table[home].played += 1
+    table[away].played += 1
+    table[home].gf += hg
+    table[home].ga += ag
+    table[away].gf += ag
+    table[away].ga += hg
 
     if hg > ag:
-        table[h].wins += 1
-        table[a].losses += 1
+        table[home].wins += 1
+        table[away].losses += 1
     elif hg == ag:
-        table[h].draws += 1
-        table[a].draws += 1
+        table[home].draws += 1
+        table[away].draws += 1
     else:
-        table[a].wins += 1
-        table[h].losses += 1
+        table[away].wins += 1
+        table[home].losses += 1
 
 
-def simulate_knockout_match(
+# ---------------------------------------------------------------------------
+# 3rd-place selection
+# ---------------------------------------------------------------------------
+
+def _select_best_third_place(
+    standings: dict[str, list[GroupResult]],
+    n: int = 8,
+) -> list[str]:
+    thirds = [ranked[2] for ranked in standings.values() if len(ranked) >= 3]
+    thirds.sort(key=lambda r: (r.points, r.gd, r.gf, random.random()), reverse=True)
+    return [r.team for r in thirds[:n]]
+
+
+# ---------------------------------------------------------------------------
+# Knockout stage
+# ---------------------------------------------------------------------------
+
+def _knockout_match(
     team_a: str,
     team_b: str,
-    predictor: MatchPredictor,
+    prob_table: dict[tuple[str, str], tuple[float, float, float]],
     rng: np.random.Generator,
 ) -> str:
-    """Simulate a single-leg knockout tie; resolve draws via penalties."""
-    result = predictor.simulate_match(team_a, team_b, neutral=True, rng=rng)
-    if result["outcome"] == "home_win":
+    """Single-leg knockout; draws resolved by penalty coin-flip."""
+    hw, d, aw = prob_table[(team_a, team_b)]
+    r = rng.random()
+    if r < hw:
         return team_a
-    elif result["outcome"] == "away_win":
-        return team_b
+    elif r < hw + d:
+        # Penalties: 50/50
+        return team_a if rng.random() < 0.5 else team_b
     else:
-        # Coin flip penalty shootout (each team ~50% from the spot)
-        return rng.choice([team_a, team_b])
+        return team_b
+
+
+def _play_round(
+    pairs: list[tuple[str, str]],
+    prob_table: dict[tuple[str, str], tuple[float, float, float]],
+    rng: np.random.Generator,
+) -> tuple[list[str], list[tuple[str, str]]]:
+    winners = [_knockout_match(a, b, prob_table, rng) for a, b in pairs]
+    next_pairs = [(winners[i], winners[i + 1]) for i in range(0, len(winners) - 1, 2)]
+    return winners, next_pairs
 
 
 def simulate_knockout_stage(
-    group_standings: dict[str, list[str]],
-    predictor: MatchPredictor,
+    group_standings: dict[str, list[GroupResult]],
+    prob_table: dict[tuple[str, str], tuple[float, float, float]],
     rng: np.random.Generator,
 ) -> dict[str, Any]:
-    """
-    Simulate R16 → QF → SF → Final.
-    Bracket order mirrors the standard 2022 World Cup draw format.
-    """
+    """R32 → R16 → QF → SF → Final."""
     groups = sorted(group_standings.keys())
+    group_winners = [group_standings[g][0].team for g in groups]
+    runners_up    = [group_standings[g][1].team for g in groups]
+    best_thirds   = _select_best_third_place(group_standings, n=8)
 
-    def top(g): return group_standings[g][0]
-    def second(g): return group_standings[g][1]
+    seeds = group_winners + runners_up + best_thirds  # 32 teams
+    n = len(seeds)
+    r32_pairs = [(seeds[i], seeds[n - 1 - i]) for i in range(n // 2)]
 
-    # Standard 2022-style R16 pairings
-    r16_pairs = [
-        (top("A"), second("B")),
-        (top("C"), second("D")),
-        (top("B"), second("A")),
-        (top("D"), second("C")),
-        (top("E"), second("F")),
-        (top("G"), second("H")),
-        (top("F"), second("E")),
-        (top("H"), second("G")),
+    r32_winners, r16_pairs  = _play_round(r32_pairs, prob_table, rng)
+    r16_winners, qf_pairs   = _play_round(r16_pairs, prob_table, rng)
+    qf_winners,  sf_pairs   = _play_round(qf_pairs,  prob_table, rng)
+    sf_winners,  _          = _play_round(sf_pairs,  prob_table, rng)
+
+    sf_losers = [
+        b if sf_winners[i] == a else a
+        for i, (a, b) in enumerate(sf_pairs)
     ]
-
-    def play_round(pairs):
-        return [
-            simulate_knockout_match(a, b, predictor, rng)
-            for a, b in pairs
-        ]
-
-    r16_winners = play_round(r16_pairs)
-    qf_pairs = list(zip(r16_winners[::2], r16_winners[1::2]))
-    qf_winners = play_round(qf_pairs)
-    sf_pairs = list(zip(qf_winners[::2], qf_winners[1::2]))
-    sf_winners = play_round(sf_pairs)
-    sf_losers = [qf_winners[i * 2 + j] for i, (_, _) in enumerate(sf_pairs)
-                 for j, w in enumerate([sf_winners[i]])
-                 if (qf_winners[i * 2], qf_winners[i * 2 + 1])[j] != w]
-
-    # Third place play-off
-    third_place = simulate_knockout_match(sf_losers[0], sf_losers[1], predictor, rng) if len(sf_losers) == 2 else None
-    champion = simulate_knockout_match(sf_winners[0], sf_winners[1], predictor, rng)
+    third_place = (
+        _knockout_match(sf_losers[0], sf_losers[1], prob_table, rng)
+        if len(sf_losers) == 2 else None
+    )
+    champion  = _knockout_match(sf_winners[0], sf_winners[1], prob_table, rng)
     runner_up = sf_winners[1] if champion == sf_winners[0] else sf_winners[0]
 
+    def _to_dict(pairs, winners):
+        return {f"{a} vs {b}": w for (a, b), w in zip(pairs, winners)}
+
     return {
-        "r16": dict(zip([f"{a} vs {b}" for a, b in r16_pairs], r16_winners)),
-        "quarterfinals": dict(zip([f"{a} vs {b}" for a, b in qf_pairs], qf_winners)),
-        "semifinals": dict(zip([f"{a} vs {b}" for a, b in sf_pairs], sf_winners)),
-        "third_place": third_place,
-        "runner_up": runner_up,
-        "champion": champion,
+        "round_of_32":   _to_dict(r32_pairs, r32_winners),
+        "round_of_16":   _to_dict(r16_pairs, r16_winners),
+        "quarterfinals": _to_dict(qf_pairs,  qf_winners),
+        "semifinals":    _to_dict(sf_pairs,  sf_winners),
+        "third_place":   third_place,
+        "runner_up":     runner_up,
+        "champion":      champion,
     }
 
+
+# ---------------------------------------------------------------------------
+# Monte Carlo entry point
+# ---------------------------------------------------------------------------
 
 def run_monte_carlo(
     groups_df: pd.DataFrame,
@@ -169,62 +255,64 @@ def run_monte_carlo(
     seed: int | None = 42,
 ) -> dict[str, Any]:
     """
-    Run `n_simulations` full tournament simulations.
+    Run `n_simulations` full 2026 World Cup simulations.
 
-    Returns aggregated probabilities for:
-    - Winning the tournament
-    - Reaching the final
-    - Reaching the semis / quarters / round of 16
-    - Advancing from group stage
+    Pre-computes all pairwise probabilities once, then the inner loop is
+    O(n_simulations × n_matches) with only dict look-ups and rng.random() calls.
     """
     rng = np.random.default_rng(seed)
-
-    counters: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     all_teams = groups_df["team"].tolist()
 
-    stage_keys = ["group_advance", "round_of_16", "quarterfinal", "semifinal", "final", "champion"]
+    # ── Pre-compute once (outside the hot loop) ──────────────────────────────
+    # Group structure as plain dict — avoids pandas groupby on every iteration
+    group_structure: dict[str, list[str]] = {
+        group: gdf["team"].tolist()
+        for group, gdf in groups_df.groupby("group")
+    }
+    # Pairwise outcome + expected-goals tables (~250 ms for 48 teams)
+    prob_table, goals_table = _build_prob_table(all_teams, predictor)
+    # ─────────────────────────────────────────────────────────────────────────
 
-    for sim in range(n_simulations):
-        standings = simulate_group_stage(groups_df, predictor, rng)
-        knockout = simulate_knockout_stage(standings, predictor, rng)
+    counters: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    stage_keys = [
+        "group_advance", "round_of_32", "round_of_16",
+        "quarterfinal", "semifinal", "final", "champion",
+    ]
 
-        # Group advancement
-        for g_teams in standings.values():
-            for t in g_teams[:2]:
-                counters[t]["group_advance"] += 1
+    for _ in range(n_simulations):
+        standings = simulate_group_stage(group_structure, prob_table, goals_table, rng)
+        knockout  = simulate_knockout_stage(standings, prob_table, rng)
 
-        # Knockout rounds — infer participation from result keys
-        for matchup, winner in knockout["r16"].items():
-            a, b = matchup.split(" vs ")
-            counters[a]["round_of_16"] += 1
-            counters[b]["round_of_16"] += 1
+        # Group advancement: top 2 from each group + 8 best 3rd-place
+        for ranked in standings.values():
+            for r in ranked[:2]:
+                counters[r.team]["group_advance"] += 1
+        for t in _select_best_third_place(standings, n=8):
+            counters[t]["group_advance"] += 1
 
-        for matchup, winner in knockout["quarterfinals"].items():
-            a, b = matchup.split(" vs ")
-            counters[a]["quarterfinal"] += 1
-            counters[b]["quarterfinal"] += 1
+        for stage, key in [
+            ("round_of_32",   "round_of_32"),
+            ("round_of_16",   "round_of_16"),
+            ("quarterfinals", "quarterfinal"),
+            ("semifinals",    "semifinal"),
+        ]:
+            for matchup in knockout[stage]:
+                a, b = matchup.split(" vs ")
+                counters[a][key] += 1
+                counters[b][key] += 1
 
-        for matchup, winner in knockout["semifinals"].items():
-            a, b = matchup.split(" vs ")
-            counters[a]["semifinal"] += 1
-            counters[b]["semifinal"] += 1
+        counters[knockout["runner_up"]]["final"]    += 1
+        counters[knockout["champion"]]["final"]     += 1
+        counters[knockout["champion"]]["champion"]  += 1
 
-        counters[knockout["runner_up"]]["final"] += 1
-        counters[knockout["champion"]]["final"] += 1
-        counters[knockout["champion"]]["champion"] += 1
-
-    # Convert to probabilities
-    results = {}
-    for team in all_teams:
-        tc = counters[team]
-        results[team] = {
-            key: round(tc[key] / n_simulations, 4)
-            for key in stage_keys
-        }
+    results = {
+        team: {key: round(counters[team][key] / n_simulations, 4) for key in stage_keys}
+        for team in all_teams
+    }
 
     return {
-        "probabilities": results,
-        "n_simulations": n_simulations,
+        "probabilities":  results,
+        "n_simulations":  n_simulations,
         "top_contenders": sorted(
             results.items(), key=lambda x: x[1]["champion"], reverse=True
         )[:8],

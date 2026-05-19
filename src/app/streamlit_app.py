@@ -47,20 +47,23 @@ def load_all_data():
 
 
 @st.cache_resource
-def build_models(teams_df, matches_df):
-    elo = build_elo_from_seed(teams_df, matches_df)
-    poisson = build_poisson_from_teams(teams_df)
-    # Attempt to fit Poisson on historical data if enough matches exist
-    if len(matches_df) > 20:
+def build_models():
+    # Zero-argument cache — avoids Streamlit pickling DataFrames on every
+    # rerun just to compute the cache key, which was the source of slowness.
+    _teams, _matches, _ = load_all_data()
+    elo = build_elo_from_seed(_teams, _matches)
+    poisson = build_poisson_from_teams(_teams)
+    if len(_matches) > 20:
         try:
-            poisson.fit(matches_df)
+            poisson.fit(_matches)
         except Exception:
             pass  # fall back to team-seeded model
     return MatchPredictor(elo=elo, poisson=poisson)
 
 
-teams_df, matches_df, groups_df = load_all_data()
-predictor = build_models(teams_df, matches_df)
+with st.spinner("Loading data and building models…"):
+    teams_df, matches_df, groups_df = load_all_data()
+    predictor = build_models()
 all_teams = sorted(teams_df["team"].tolist())
 
 
@@ -96,9 +99,9 @@ if page == "Match Predictor":
 
     col1, col2 = st.columns(2)
     with col1:
-        home = st.selectbox("Team A", all_teams, index=all_teams.index("Brazil"))
+        home = st.selectbox("Team A", all_teams, index=all_teams.index("Brazil") if "Brazil" in all_teams else 0)
     with col2:
-        away = st.selectbox("Team B", all_teams, index=all_teams.index("France"))
+        away = st.selectbox("Team B", all_teams, index=all_teams.index("France") if "France" in all_teams else 1)
 
     neutral = st.checkbox("Neutral venue", value=True)
 
@@ -159,7 +162,8 @@ if page == "Match Predictor":
 elif page == "Tournament Simulator":
     st.header("Monte Carlo Tournament Simulator")
 
-    n_sims = st.slider("Number of simulations", 1_000, 50_000, 10_000, step=1_000)
+    n_sims = st.slider("Number of simulations", 1_000, 20_000, 5_000, step=1_000,
+                        help="~0.7s per 1 000 sims. 5 000 gives stable results in ~3.5s.")
     seed = st.number_input("Random seed", value=42, min_value=0)
 
     if st.button("Run Simulation", type="primary"):
@@ -186,6 +190,8 @@ elif page == "Tournament Simulator":
                 "Reach Final": f"{p['final']:.1%}",
                 "Reach SF": f"{p['semifinal']:.1%}",
                 "Reach QF": f"{p['quarterfinal']:.1%}",
+                "Reach R16": f"{p['round_of_16']:.1%}",
+                "Reach R32": f"{p['round_of_32']:.1%}",
                 "Advance Group": f"{p['group_advance']:.1%}",
             })
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
@@ -258,7 +264,7 @@ elif page == "Group Analysis":
 elif page == "Team Deep-Dive":
     st.header("Team Deep-Dive")
 
-    selected_team = st.selectbox("Select Team", all_teams, index=all_teams.index("Brazil"))
+    selected_team = st.selectbox("Select Team", all_teams, index=all_teams.index("Brazil") if "Brazil" in all_teams else 0)
     team_stats = teams_df[teams_df["team"] == selected_team].iloc[0]
     team_group_row = groups_df[groups_df["team"] == selected_team]
     team_group = team_group_row["group"].iloc[0] if not team_group_row.empty else "N/A"

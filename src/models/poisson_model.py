@@ -39,36 +39,34 @@ class PoissonModel:
         idx = {t: i for i, t in enumerate(teams)}
         n = len(teams)
 
-        def _log_likelihood(params):
-            attack = params[:n]
-            defense = params[n:2 * n]
-            ll = 0.0
-            for _, row in matches_df.iterrows():
-                hi = idx[row["home_team"]]
-                ai = idx[row["away_team"]]
-                ha = 1.0 if row.get("neutral", False) else self.home_advantage
-                lam_h = ha * attack[hi] * defense[ai]
-                lam_a = attack[ai] * defense[hi]
-                lam_h = max(lam_h, 1e-6)
-                lam_a = max(lam_a, 1e-6)
-                ll += poisson.logpmf(int(row["home_goals"]), lam_h)
-                ll += poisson.logpmf(int(row["away_goals"]), lam_a)
+        # Pre-extract arrays once — avoids iterrows() inside the optimizer hot loop
+        home_idx   = np.array([idx[t] for t in matches_df["home_team"]], dtype=np.intp)
+        away_idx   = np.array([idx[t] for t in matches_df["away_team"]], dtype=np.intp)
+        home_goals = matches_df["home_goals"].to_numpy(dtype=int)
+        away_goals = matches_df["away_goals"].to_numpy(dtype=int)
+        ha_factors = np.where(matches_df["neutral"].to_numpy(dtype=bool), 1.0, self.home_advantage)
+
+        def _log_likelihood(params: np.ndarray) -> float:
+            attack  = params[:n]
+            defense = params[n:]
+            lam_h = np.maximum(ha_factors * attack[home_idx] * defense[away_idx], 1e-6)
+            lam_a = np.maximum(attack[away_idx] * defense[home_idx], 1e-6)
+            ll = float(np.sum(poisson.logpmf(home_goals, lam_h) + poisson.logpmf(away_goals, lam_a)))
             return -ll
 
         x0 = np.ones(2 * n)
-        # Soft constraint: average attack = 1
         constraints = [{"type": "eq", "fun": lambda p: p[:n].mean() - 1.0}]
         bounds = [(0.1, 5.0)] * (2 * n)
 
         result = minimize(
             _log_likelihood, x0, method="SLSQP",
             bounds=bounds, constraints=constraints,
-            options={"maxiter": 500, "ftol": 1e-9},
+            options={"maxiter": 200, "ftol": 1e-6},
         )
 
         params = result.x
-        self.attack = {t: params[idx[t]] for t in teams}
-        self.defense = {t: params[n + idx[t]] for t in teams}
+        self.attack  = {t: params[idx[t]]       for t in teams}
+        self.defense = {t: params[n + idx[t]]   for t in teams}
         self._fitted = True
         return self
 
