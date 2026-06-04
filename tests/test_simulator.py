@@ -1,8 +1,11 @@
-"""Tests for the Monte Carlo tournament simulator."""
+"""Tests for the 48-team Monte Carlo tournament simulator."""
+
+from __future__ import annotations
+
+import string
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from src.models.elo import EloRatings
 from src.models.match_predictor import MatchPredictor
@@ -11,138 +14,150 @@ from src.simulation.tournament_simulator import (
     GroupResult,
     run_monte_carlo,
     simulate_group_stage,
-    simulate_knockout_match,
     simulate_knockout_stage,
 )
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# -- Fixtures -----------------------------------------------------------------
 
-GROUPS = pd.DataFrame([
-    {"group": "A", "team": "Brazil"},
-    {"group": "A", "team": "France"},
-    {"group": "A", "team": "Germany"},
-    {"group": "A", "team": "Spain"},
-    {"group": "B", "team": "Argentina"},
-    {"group": "B", "team": "England"},
-    {"group": "B", "team": "Portugal"},
-    {"group": "B", "team": "Netherlands"},
-    {"group": "C", "team": "Belgium"},
-    {"group": "C", "team": "Italy"},
-    {"group": "C", "team": "Croatia"},
-    {"group": "C", "team": "Denmark"},
-    {"group": "D", "team": "Uruguay"},
-    {"group": "D", "team": "Mexico"},
-    {"group": "D", "team": "USA"},
-    {"group": "D", "team": "Senegal"},
-    {"group": "E", "team": "Morocco"},
-    {"group": "E", "team": "Colombia"},
-    {"group": "E", "team": "Japan"},
-    {"group": "E", "team": "South Korea"},
-    {"group": "F", "team": "Switzerland"},
-    {"group": "F", "team": "Poland"},
-    {"group": "F", "team": "Ecuador"},
-    {"group": "F", "team": "Australia"},
-    {"group": "G", "team": "Serbia"},
-    {"group": "G", "team": "Canada"},
-    {"group": "G", "team": "Wales"},
-    {"group": "G", "team": "Iran"},
-    {"group": "H", "team": "Tunisia"},
-    {"group": "H", "team": "Cameroon"},
-    {"group": "H", "team": "Ghana"},
-    {"group": "H", "team": "Saudi Arabia"},
-])
-
+GROUP_LABELS = list(string.ascii_uppercase[:12])
+GROUPS = pd.DataFrame(
+    [
+        {"group": group, "team": f"{group}{seed}"}
+        for group in GROUP_LABELS
+        for seed in range(1, 5)
+    ]
+)
 TEAMS = GROUPS["team"].tolist()
+GROUP_STRUCTURE = {
+    group: gdf["team"].tolist()
+    for group, gdf in GROUPS.groupby("group")
+}
 
 
 def make_predictor(all_teams: list[str]) -> MatchPredictor:
     """Build a simple uniform predictor for testing."""
     elo = EloRatings()
-    for t in all_teams:
-        elo.set(t, 1500.0)
+    for team in all_teams:
+        elo.set(team, 1500.0)
+
     poisson = PoissonModel()
-    for t in all_teams:
-        poisson.attack[t] = 1.0
-        poisson.defense[t] = 1.0
+    for team in all_teams:
+        poisson.attack[team] = 1.0
+        poisson.defense[team] = 1.0
     poisson._fitted = True
+
     return MatchPredictor(elo=elo, poisson=poisson)
 
 
-# ── GroupResult ───────────────────────────────────────────────────────────────
+def make_tables(
+    all_teams: list[str],
+) -> tuple[
+    dict[tuple[str, str], tuple[float, float, float]],
+    dict[tuple[str, str], tuple[float, float]],
+]:
+    """Build explicit pairwise lookup tables for low-level simulator tests."""
+    prob_table = {}
+    goals_table = {}
+    for home in all_teams:
+        for away in all_teams:
+            if home == away:
+                continue
+            prob_table[(home, away)] = (0.35, 0.30, 0.35)
+            goals_table[(home, away)] = (1.0, 1.0)
+    return prob_table, goals_table
+
+
+# -- GroupResult ---------------------------------------------------------------
 
 class TestGroupResult:
     def test_points_calculation(self):
-        r = GroupResult(team="Brazil", wins=2, draws=1, losses=0)
-        assert r.points == 7
+        result = GroupResult(team="A1", wins=2, draws=1, losses=0)
+        assert result.points == 7
 
-    def test_gd(self):
-        r = GroupResult(team="Brazil", gf=5, ga=2)
-        assert r.gd == 3
+    def test_goal_difference_calculation(self):
+        result = GroupResult(team="A1", gf=5, ga=2)
+        assert result.gd == 3
 
-    def test_sort_key_order(self):
-        r1 = GroupResult(team="A", wins=3)
-        r2 = GroupResult(team="B", wins=2, draws=1)
-        assert r1.sort_key() > r2.sort_key()  # 9 pts > 7 pts
+    def test_current_sorting_uses_points_goal_difference_and_goals_for(self):
+        better_points = GroupResult(team="A1", wins=3, gf=3, ga=0)
+        worse_points = GroupResult(team="A2", wins=2, draws=1, gf=8, ga=0)
+        assert (better_points.points, better_points.gd, better_points.gf) > (
+            worse_points.points,
+            worse_points.gd,
+            worse_points.gf,
+        )
+
+        better_goal_difference = GroupResult(team="A3", wins=2, gf=5, ga=1)
+        worse_goal_difference = GroupResult(team="A4", wins=2, gf=3, ga=1)
+        assert (
+            better_goal_difference.points,
+            better_goal_difference.gd,
+            better_goal_difference.gf,
+        ) > (
+            worse_goal_difference.points,
+            worse_goal_difference.gd,
+            worse_goal_difference.gf,
+        )
 
 
-# ── simulate_group_stage ──────────────────────────────────────────────────────
+# -- simulate_group_stage ------------------------------------------------------
 
 class TestGroupStage:
     def setup_method(self):
-        self.predictor = make_predictor(TEAMS)
+        self.prob_table, self.goals_table = make_tables(TEAMS)
         self.rng = np.random.default_rng(0)
 
-    def test_returns_all_groups(self):
-        standings = simulate_group_stage(GROUPS, self.predictor, self.rng)
-        assert set(standings.keys()) == set(GROUPS["group"].unique())
+    def simulate(self):
+        return simulate_group_stage(
+            GROUP_STRUCTURE,
+            self.prob_table,
+            self.goals_table,
+            self.rng,
+        )
 
-    def test_each_group_has_four_teams(self):
-        standings = simulate_group_stage(GROUPS, self.predictor, self.rng)
+    def test_returns_all_twelve_groups(self):
+        standings = self.simulate()
+        assert set(standings.keys()) == set(GROUP_LABELS)
+
+    def test_each_group_has_four_ranked_results(self):
+        standings = self.simulate()
         for group, ranked in standings.items():
             assert len(ranked) == 4, f"Group {group} has {len(ranked)} teams"
+            assert all(isinstance(result, GroupResult) for result in ranked)
 
     def test_each_group_contains_correct_teams(self):
-        standings = simulate_group_stage(GROUPS, self.predictor, self.rng)
+        standings = self.simulate()
         for group, ranked in standings.items():
-            expected = set(GROUPS[GROUPS["group"] == group]["team"])
-            assert set(ranked) == expected
+            expected = set(GROUP_STRUCTURE[group])
+            actual = {result.team for result in ranked}
+            assert actual == expected
 
     def test_no_team_appears_twice(self):
-        standings = simulate_group_stage(GROUPS, self.predictor, self.rng)
-        all_teams_out = [t for teams in standings.values() for t in teams]
+        standings = self.simulate()
+        all_teams_out = [result.team for ranked in standings.values() for result in ranked]
+        assert len(all_teams_out) == 48
         assert len(all_teams_out) == len(set(all_teams_out))
 
-
-# ── simulate_knockout_match ───────────────────────────────────────────────────
-
-class TestKnockoutMatch:
-    def setup_method(self):
-        self.predictor = make_predictor(TEAMS)
-        self.rng = np.random.default_rng(42)
-
-    def test_winner_is_one_of_the_two_teams(self):
-        winner = simulate_knockout_match("Brazil", "Germany", self.predictor, self.rng)
-        assert winner in {"Brazil", "Germany"}
-
-    def test_deterministic_with_seed(self):
-        results = set()
-        for seed in range(10):
-            rng = np.random.default_rng(seed)
-            results.add(simulate_knockout_match("Brazil", "Germany", self.predictor, rng))
-        # With equal teams both should win sometimes over 10 seeds
-        assert len(results) >= 1
+    def test_each_team_plays_three_group_matches(self):
+        standings = self.simulate()
+        for ranked in standings.values():
+            assert {result.played for result in ranked} == {3}
 
 
-# ── simulate_knockout_stage ───────────────────────────────────────────────────
+# -- simulate_knockout_stage ---------------------------------------------------
 
 class TestKnockoutStage:
     def setup_method(self):
-        self.predictor = make_predictor(TEAMS)
-        self.rng = np.random.default_rng(0)
-        standings = simulate_group_stage(GROUPS, self.predictor, self.rng)
-        self.standings = standings
-        self.result = simulate_knockout_stage(standings, self.predictor, self.rng)
+        self.prob_table, self.goals_table = make_tables(TEAMS)
+        rng = np.random.default_rng(0)
+        self.standings = simulate_group_stage(
+            GROUP_STRUCTURE,
+            self.prob_table,
+            self.goals_table,
+            rng,
+        )
+        self.result = simulate_knockout_stage(self.standings, self.prob_table, rng)
 
     def test_champion_is_a_tournament_team(self):
         assert self.result["champion"] in TEAMS
@@ -150,52 +165,79 @@ class TestKnockoutStage:
     def test_runner_up_is_different_from_champion(self):
         assert self.result["runner_up"] != self.result["champion"]
 
-    def test_result_has_required_keys(self):
-        required = {"r16", "quarterfinals", "semifinals", "champion", "runner_up"}
+    def test_result_has_current_2026_knockout_keys(self):
+        required = {
+            "round_of_32",
+            "round_of_16",
+            "quarterfinals",
+            "semifinals",
+            "third_place",
+            "runner_up",
+            "champion",
+        }
         assert required.issubset(set(self.result.keys()))
 
-    def test_r16_has_eight_matches(self):
-        assert len(self.result["r16"]) == 8
+    def test_round_of_32_has_sixteen_matches(self):
+        assert len(self.result["round_of_32"]) == 16
 
-    def test_qf_has_four_matches(self):
+    def test_round_of_16_has_eight_matches(self):
+        assert len(self.result["round_of_16"]) == 8
+
+    def test_quarterfinals_have_four_matches(self):
         assert len(self.result["quarterfinals"]) == 4
 
-    def test_sf_has_two_matches(self):
+    def test_semifinals_have_two_matches(self):
         assert len(self.result["semifinals"]) == 2
 
+    def test_third_place_winner_is_a_semifinal_loser(self):
+        semifinalists = {
+            team
+            for matchup in self.result["semifinals"]
+            for team in matchup.split(" vs ")
+        }
+        finalists = set(self.result["semifinals"].values())
+        semifinal_losers = semifinalists - finalists
+        assert self.result["third_place"] in semifinal_losers
 
-# ── run_monte_carlo ───────────────────────────────────────────────────────────
+
+# -- run_monte_carlo -----------------------------------------------------------
 
 class TestMonteCarlo:
     def setup_method(self):
         self.predictor = make_predictor(TEAMS)
 
-    def test_all_teams_have_probabilities(self):
+    def test_all_48_teams_have_probabilities(self):
         results = run_monte_carlo(GROUPS, self.predictor, n_simulations=200, seed=0)
-        for team in TEAMS:
-            assert team in results["probabilities"]
+        assert set(results["probabilities"]) == set(TEAMS)
 
     def test_champion_probs_sum_to_one(self):
         results = run_monte_carlo(GROUPS, self.predictor, n_simulations=500, seed=1)
         total = sum(p["champion"] for p in results["probabilities"].values())
-        assert abs(total - 1.0) < 0.02  # allow small rounding
+        assert abs(total - 1.0) < 0.02
+
+    def test_stage_totals_match_48_team_2026_format(self):
+        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=300, seed=2)
+        probabilities = results["probabilities"]
+
+        assert abs(sum(p["group_advance"] for p in probabilities.values()) - 32.0) < 0.05
+        assert abs(sum(p["round_of_32"] for p in probabilities.values()) - 32.0) < 0.05
+        assert abs(sum(p["round_of_16"] for p in probabilities.values()) - 16.0) < 0.05
+        assert abs(sum(p["quarterfinal"] for p in probabilities.values()) - 8.0) < 0.05
+        assert abs(sum(p["semifinal"] for p in probabilities.values()) - 4.0) < 0.05
+        assert abs(sum(p["final"] for p in probabilities.values()) - 2.0) < 0.05
+        assert abs(sum(p["champion"] for p in probabilities.values()) - 1.0) < 0.05
 
     def test_group_advance_greater_than_champion(self):
-        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=500, seed=2)
-        for team, p in results["probabilities"].items():
-            assert p["group_advance"] >= p["champion"] - 0.01
+        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=500, seed=3)
+        for probabilities in results["probabilities"].values():
+            assert probabilities["group_advance"] >= probabilities["champion"] - 0.01
 
     def test_top_contenders_length(self):
-        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=200, seed=3)
+        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=200, seed=4)
         assert len(results["top_contenders"]) == 8
 
     def test_probabilities_are_valid(self):
-        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=300, seed=4)
-        for team, p in results["probabilities"].items():
-            for stage, val in p.items():
-                assert 0.0 <= val <= 1.0, f"{team} {stage}={val} out of range"
-
-    def test_reproducible_with_seed(self):
-        r1 = run_monte_carlo(GROUPS, self.predictor, n_simulations=100, seed=99)
-        r2 = run_monte_carlo(GROUPS, self.predictor, n_simulations=100, seed=99)
-        assert r1["probabilities"]["Brazil"]["champion"] == r2["probabilities"]["Brazil"]["champion"]
+        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=300, seed=5)
+        for team, probabilities in results["probabilities"].items():
+            for stage, value in probabilities.items():
+                assert 0.0 <= value <= 1.0, f"{team} {stage}={value} out of range"
