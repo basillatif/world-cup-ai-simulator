@@ -1,12 +1,13 @@
 # World Cup AI Simulator
 
-A World Cup prediction engine combining a Monte Carlo tournament simulator with a Claude-powered analyst layer.
-Goals of This Project: 
--GitHub repo
--Medium article
--architecture diagram
--LinkedIn carousel
--short demo clip
+A 2026 World Cup prediction engine combining a 48-team Monte Carlo tournament simulator with a Claude-powered analyst layer.
+
+Goals of this project:
+- GitHub repo
+- Medium article
+- Architecture diagram
+- LinkedIn carousel
+- Short demo clip
 
 
 > **Core design principle:** GenAI is not replacing the model. It is explaining the model.
@@ -24,7 +25,7 @@ teams.csv + matches.csv
   Poisson Model ───────┘         │
                                  ▼
                     Monte Carlo Tournament Simulator
-                         (10,000 iterations)
+                    (48 teams, 12 groups, N iterations)
                                  │
                                  ▼
                        Probability Distributions
@@ -48,9 +49,9 @@ world-cup-ai-simulator/
 │   ├── raw/                        # Drop your own datasets here
 │   ├── processed/
 │   └── sample/
-│       ├── teams.csv               # 32 teams with ELO, FIFA rank, form, squad value
-│       ├── matches.csv             # Historical results (2021–2022)
-│       └── groups.csv              # 2022 World Cup draw
+│       ├── teams.csv               # 48 teams with ELO, FIFA rank, form, squad value
+│       ├── matches.csv             # Sample historical results for model fitting
+│       └── groups.csv              # 2026-style 12-group tournament field
 ├── src/
 │   ├── data/load_data.py           # CSV loaders with validation
 │   ├── features/build_features.py  # H2H, rolling form, matchup feature vectors
@@ -74,12 +75,15 @@ world-cup-ai-simulator/
 
 ## Quickstart
 
-### 1. Install dependencies
+### 1. Create the Python environment
+
+Use Python 3.11 or newer. This project has been verified locally with Python 3.11.11.
 
 ```bash
 cd world-cup-ai-simulator
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
 ```
 
 ### 2. Set your API key (optional — needed only for Claude commentary)
@@ -91,13 +95,13 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ### 3. Run the Streamlit app
 
 ```bash
-streamlit run src/app/streamlit_app.py
+.venv/bin/streamlit run src/app/streamlit_app.py
 ```
 
 ### 4. Run the tests
 
 ```bash
-pytest
+.venv/bin/pytest
 ```
 
 ---
@@ -126,11 +130,13 @@ Blends ELO (45%) and Poisson (55%) outcome probabilities. For simulated matches,
 
 ### Monte Carlo simulator (`src/simulation/tournament_simulator.py`)
 
-Runs N full tournaments end-to-end:
+Runs N full 2026-style tournaments end-to-end:
 1. Simulates all group-stage round-robin fixtures
 2. Ranks teams by points → GD → GF (random tiebreak)
-3. Simulates R16 → QF → SF → Final with coin-flip penalty shootouts for drawn knockout ties
-4. Aggregates advancement probabilities across all simulations
+3. Advances the top 2 teams from each of 12 groups plus the 8 best third-place teams
+4. Simulates R32 → R16 → QF → SF → Final, plus a third-place match
+5. Resolves drawn knockout ties with coin-flip penalty shootouts
+6. Aggregates advancement probabilities across all simulations
 
 ### Claude analyst layer (`src/genai/`)
 
