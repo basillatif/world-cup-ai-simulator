@@ -1,96 +1,73 @@
 date,home_team,away_team,home_goals,away_goals,tournament,neutral
-2022-11-20,Qatar,Ecuador,0,2,FIFA World Cup,false
-2022-11-21,England,Iran,6,2,FIFA World Cup,false
-2022-11-21,Senegal,Netherlands,0,2,FIFA World Cup,false
-2022-11-21,USA,Wales,1,1,FIFA World Cup,false
-2022-11-22,Argentina,Saudi Arabia,1,2,FIFA World Cup,false
-2022-11-22,Denmark,Tunisia,0,0,FIFA World Cup,false
-2022-11-22,Mexico,Poland,0,0,FIFA World Cup,false
-2022-11-23,France,Australia,4,1,FIFA World Cup,false
-2022-11-23,Germany,Japan,1,2,FIFA World Cup,false
-2022-11-23,Spain,Costa Rica,7,0,FIFA World Cup,false
-2022-11-24,Belgium,Canada,1,0,FIFA World Cup,false
-2022-11-24,Morocco,Croatia,0,0,FIFA World Cup,false
-2022-11-24,Brazil,Serbia,2,0,FIFA World Cup,false
-2022-11-24,Switzerland,Cameroon,1,0,FIFA World Cup,false
-2022-11-25,Uruguay,South Korea,0,0,FIFA World Cup,false
-2022-11-25,Portugal,Ghana,3,2,FIFA World Cup,false
-2022-11-26,Netherlands,Ecuador,1,1,FIFA World Cup,false
-2022-11-26,England,USA,0,0,FIFA World Cup,false
-2022-11-26,Qatar,Senegal,1,3,FIFA World Cup,false
-2022-11-27,Wales,Iran,0,2,FIFA World Cup,false
-2022-11-27,Argentina,Mexico,2,0,FIFA World Cup,false
-2022-11-27,Poland,Saudi Arabia,2,0,FIFA World Cup,false
-2022-11-28,France,Denmark,2,1,FIFA World Cup,false
-2022-11-28,Tunisia,Australia,0,1,FIFA World Cup,false
-2022-11-28,Germany,Spain,1,1,FIFA World Cup,false
-2022-11-28,Japan,Costa Rica,0,1,FIFA World Cup,false
-2022-11-29,Belgium,Morocco,0,2,FIFA World Cup,false
-2022-11-29,Croatia,Canada,4,1,FIFA World Cup,false
-2022-11-29,Brazil,Switzerland,1,0,FIFA World Cup,false
-2022-11-29,Cameroon,Serbia,3,3,FIFA World Cup,false
-2022-11-30,South Korea,Ghana,2,3,FIFA World Cup,false
-2022-11-30,Uruguay,Ghana,2,0,FIFA World Cup,false
-2022-11-30,Portugal,Uruguay,2,0,FIFA World Cup,false
-2022-12-01,Netherlands,Qatar,2,0,FIFA World Cup,false
-2022-12-01,Senegal,Ecuador,2,1,FIFA World Cup,false
-2022-12-01,England,Wales,3,0,FIFA World Cup,false
-2022-12-01,Iran,USA,0,1,FIFA World Cup,false
-2022-12-02,France,Tunisia,0,1,FIFA World Cup,false
-2022-12-02,Australia,Denmark,1,0,FIFA World Cup,false
-2022-12-02,Poland,Argentina,0,2,FIFA World Cup,false
-2022-12-02,Saudi Arabia,Mexico,1,2,FIFA World Cup,false
-2022-12-02,Japan,Spain,2,1,FIFA World Cup,false
-2022-12-02,Costa Rica,Germany,2,4,FIFA World Cup,false
-2022-12-02,Belgium,Croatia,0,0,FIFA World Cup,false
-2022-12-02,Canada,Morocco,1,2,FIFA World Cup,false
-2022-12-02,Brazil,Cameroon,0,1,FIFA World Cup,false
-2022-12-02,Serbia,Switzerland,2,3,FIFA World Cup,false
-2022-12-02,South Korea,Portugal,2,1,FIFA World Cup,false
-2022-12-02,Ghana,Uruguay,0,2,FIFA World Cup,false
-2022-12-03,Netherlands,USA,3,1,FIFA World Cup,false
-2022-12-03,Argentina,Australia,2,1,FIFA World Cup,false
-2022-12-03,France,Poland,3,1,FIFA World Cup,false
-2022-12-03,England,Senegal,3,0,FIFA World Cup,false
-2022-12-04,Japan,Croatia,1,1,FIFA World Cup,true
-2022-12-04,Brazil,South Korea,4,1,FIFA World Cup,true
-2022-12-05,England,Senegal,3,0,FIFA World Cup,true
-2022-12-05,Morocco,Spain,0,0,FIFA World Cup,true
-2022-12-06,Portugal,Switzerland,6,1,FIFA World Cup,true
-2022-12-06,France,England,2,1,FIFA World Cup,true
-2022-12-09,Argentina,Netherlands,2,2,FIFA World Cup,true
-2022-12-09,Croatia,Brazil,1,1,FIFA World Cup,true
-2022-12-10,Morocco,Portugal,1,0,FIFA World Cup,true
-2022-12-10,France,England,2,1,FIFA World Cup,true
-2022-12-13,Argentina,Croatia,3,0,FIFA World Cup,true
-2022-12-14,France,Morocco,2,0,FIFA World Cup,true
-2022-12-17,Croatia,Morocco,2,1,FIFA World Cup,true
-2022-12-18,Argentina,France,3,3,FIFA World Cup,true
-2021-03-25,Germany,Iceland,3,0,FIFA World Cup Qualifying,false
-2021-03-27,Netherlands,Latvia,2,0,FIFA World Cup Qualifying,false
-2021-03-27,France,Ukraine,1,1,FIFA World Cup Qualifying,false
-2021-03-27,Spain,Kosovo,3,1,FIFA World Cup Qualifying,false
-2021-03-25,Italy,Northern Ireland,2,0,FIFA World Cup Qualifying,false
-2021-03-26,Portugal,Azerbaijan,1,0,FIFA World Cup Qualifying,false
-2021-03-27,England,Albania,2,0,FIFA World Cup Qualifying,false
-2021-03-24,Belgium,Wales,3,1,FIFA World Cup Qualifying,false
-2021-06-07,Brazil,Ecuador,2,0,Copa America,false
-2021-06-14,Argentina,Chile,1,1,Copa America,false
-2021-06-15,Uruguay,Argentina,0,1,Copa America,false
-2021-07-10,Argentina,Brazil,1,0,Copa America,true
-2021-07-02,Spain,Italy,1,1,UEFA Nations League,true
-2021-10-07,France,Belgium,3,2,UEFA Nations League,true
-2021-10-10,Spain,France,2,1,UEFA Nations League,true
-2022-06-03,England,Italy,0,0,UEFA Nations League,false
-2022-06-05,Germany,Italy,5,2,UEFA Nations League,false
-2022-09-22,France,Denmark,2,0,UEFA Nations League,false
-2022-09-25,Netherlands,Belgium,1,0,UEFA Nations League,false
-2022-03-26,Brazil,Chile,4,0,FIFA World Cup Qualifying,false
-2022-03-30,Brazil,Bolivia,4,0,FIFA World Cup Qualifying,false
-2022-01-27,Argentina,Colombia,1,0,FIFA World Cup Qualifying,false
-2022-02-01,Mexico,Panama,1,0,CONCACAF WCQ,false
-2022-02-02,USA,Honduras,3,0,CONCACAF WCQ,false
-2022-03-24,Senegal,Egypt,1,0,CAF WCQ,true
-2022-03-29,Morocco,DR Congo,4,1,CAF WCQ,false
-2022-09-23,Japan,USA,2,0,International Friendly,true
-2022-09-27,South Korea,Costa Rica,2,2,International Friendly,true
+2025-01-10,Mexico,South Korea,1,1,Illustrative Sample Data,true
+2025-01-11,South Africa,Czechia,1,2,Illustrative Sample Data,true
+2025-01-12,Mexico,South Africa,2,1,Illustrative Sample Data,true
+2025-01-13,South Korea,Czechia,1,1,Illustrative Sample Data,true
+2025-01-14,Mexico,Czechia,1,1,Illustrative Sample Data,true
+2025-01-15,South Korea,South Africa,2,1,Illustrative Sample Data,true
+2025-01-16,Canada,Switzerland,1,2,Illustrative Sample Data,true
+2025-01-17,Qatar,Bosnia and Herzegovina,1,2,Illustrative Sample Data,true
+2025-01-18,Canada,Qatar,2,1,Illustrative Sample Data,true
+2025-01-19,Switzerland,Bosnia and Herzegovina,2,1,Illustrative Sample Data,true
+2025-01-20,Canada,Bosnia and Herzegovina,1,1,Illustrative Sample Data,true
+2025-01-21,Switzerland,Qatar,2,0,Illustrative Sample Data,true
+2025-01-22,Brazil,Morocco,2,1,Illustrative Sample Data,true
+2025-01-23,Scotland,Haiti,2,0,Illustrative Sample Data,true
+2025-01-24,Brazil,Scotland,2,0,Illustrative Sample Data,true
+2025-01-25,Morocco,Haiti,2,0,Illustrative Sample Data,true
+2025-01-26,Brazil,Haiti,2,0,Illustrative Sample Data,true
+2025-01-27,Morocco,Scotland,1,1,Illustrative Sample Data,true
+2025-01-28,United States,Paraguay,2,1,Illustrative Sample Data,true
+2025-01-29,Australia,Turkey,1,1,Illustrative Sample Data,true
+2025-01-30,United States,Australia,2,1,Illustrative Sample Data,true
+2025-01-31,Paraguay,Turkey,1,1,Illustrative Sample Data,true
+2025-02-01,United States,Turkey,1,1,Illustrative Sample Data,true
+2025-02-02,Paraguay,Australia,1,1,Illustrative Sample Data,true
+2025-02-03,Germany,Ecuador,2,1,Illustrative Sample Data,true
+2025-02-04,Ivory Coast,Curacao,2,0,Illustrative Sample Data,true
+2025-02-05,Germany,Ivory Coast,2,1,Illustrative Sample Data,true
+2025-02-06,Ecuador,Curacao,2,1,Illustrative Sample Data,true
+2025-02-07,Germany,Curacao,2,0,Illustrative Sample Data,true
+2025-02-08,Ecuador,Ivory Coast,1,1,Illustrative Sample Data,true
+2025-02-09,Netherlands,Japan,2,1,Illustrative Sample Data,true
+2025-02-10,Tunisia,Sweden,1,2,Illustrative Sample Data,true
+2025-02-11,Netherlands,Tunisia,2,0,Illustrative Sample Data,true
+2025-02-12,Japan,Sweden,1,1,Illustrative Sample Data,true
+2025-02-13,Netherlands,Sweden,2,1,Illustrative Sample Data,true
+2025-02-14,Japan,Tunisia,2,1,Illustrative Sample Data,true
+2025-02-15,Belgium,Iran,2,0,Illustrative Sample Data,true
+2025-02-16,Egypt,New Zealand,2,1,Illustrative Sample Data,true
+2025-02-17,Belgium,Egypt,2,1,Illustrative Sample Data,true
+2025-02-18,Iran,New Zealand,1,1,Illustrative Sample Data,true
+2025-02-19,Belgium,New Zealand,2,0,Illustrative Sample Data,true
+2025-02-20,Iran,Egypt,1,1,Illustrative Sample Data,true
+2025-02-21,Spain,Uruguay,2,1,Illustrative Sample Data,true
+2025-02-22,Saudi Arabia,Cape Verde,1,1,Illustrative Sample Data,true
+2025-02-23,Spain,Saudi Arabia,2,0,Illustrative Sample Data,true
+2025-02-24,Uruguay,Cape Verde,2,1,Illustrative Sample Data,true
+2025-02-25,Spain,Cape Verde,2,0,Illustrative Sample Data,true
+2025-02-26,Uruguay,Saudi Arabia,2,1,Illustrative Sample Data,true
+2025-02-27,France,Senegal,2,1,Illustrative Sample Data,true
+2025-02-28,Norway,Iraq,2,1,Illustrative Sample Data,true
+2025-03-01,France,Norway,2,0,Illustrative Sample Data,true
+2025-03-02,Senegal,Iraq,2,1,Illustrative Sample Data,true
+2025-03-03,France,Iraq,2,0,Illustrative Sample Data,true
+2025-03-04,Senegal,Norway,1,1,Illustrative Sample Data,true
+2025-03-05,Argentina,Austria,2,1,Illustrative Sample Data,true
+2025-03-06,Algeria,Jordan,2,1,Illustrative Sample Data,true
+2025-03-07,Argentina,Algeria,2,0,Illustrative Sample Data,true
+2025-03-08,Austria,Jordan,2,1,Illustrative Sample Data,true
+2025-03-09,Argentina,Jordan,2,0,Illustrative Sample Data,true
+2025-03-10,Austria,Algeria,1,1,Illustrative Sample Data,true
+2025-03-11,Portugal,Colombia,2,1,Illustrative Sample Data,true
+2025-03-12,Uzbekistan,DR Congo,1,1,Illustrative Sample Data,true
+2025-03-13,Portugal,Uzbekistan,2,0,Illustrative Sample Data,true
+2025-03-14,Colombia,DR Congo,2,1,Illustrative Sample Data,true
+2025-03-15,Portugal,DR Congo,2,0,Illustrative Sample Data,true
+2025-03-16,Colombia,Uzbekistan,2,1,Illustrative Sample Data,true
+2025-03-17,England,Croatia,2,1,Illustrative Sample Data,true
+2025-03-18,Panama,Ghana,1,1,Illustrative Sample Data,true
+2025-03-19,England,Panama,2,0,Illustrative Sample Data,true
+2025-03-20,Croatia,Ghana,2,1,Illustrative Sample Data,true
+2025-03-21,England,Ghana,2,0,Illustrative Sample Data,true
+2025-03-22,Croatia,Panama,2,0,Illustrative Sample Data,true
