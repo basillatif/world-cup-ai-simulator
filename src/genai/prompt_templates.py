@@ -41,11 +41,11 @@ def match_preview_prompt(
 **Team Profiles:**
 {home_team}: ELO {home_stats.get('elo_rating', 'N/A')}, FIFA Rank #{home_stats.get('fifa_rank', 'N/A')},
   Avg scored: {home_stats.get('avg_goals_scored', 'N/A')}, Avg conceded: {home_stats.get('avg_goals_conceded', 'N/A')},
-  Squad value: €{home_stats.get('squad_value_m', 'N/A')}M, World Cup titles: {home_stats.get('world_cup_titles', 0)}
+  Squad value: ${home_stats.get('squad_value_m', 'N/A')}M, World Cup titles: {home_stats.get('world_cup_titles', 0)}
 
 {away_team}: ELO {away_stats.get('elo_rating', 'N/A')}, FIFA Rank #{away_stats.get('fifa_rank', 'N/A')},
   Avg scored: {away_stats.get('avg_goals_scored', 'N/A')}, Avg conceded: {away_stats.get('avg_goals_conceded', 'N/A')},
-  Squad value: €{away_stats.get('squad_value_m', 'N/A')}M, World Cup titles: {away_stats.get('world_cup_titles', 0)}
+  Squad value: ${away_stats.get('squad_value_m', 'N/A')}M, World Cup titles: {away_stats.get('world_cup_titles', 0)}
 
 **Head-to-Head (last {h2h.get('games', 0)} meetings):**
 {home_team} wins: {h2h.get('a_wins', 0)}, Draws: {h2h.get('draws', 0)}, {away_team} wins: {h2h.get('b_wins', 0)}
@@ -82,7 +82,7 @@ tournament probabilities for {team}:
 **Team Profile:**
 ELO rating: {team_stats.get('elo_rating', 'N/A')} | FIFA Rank: #{team_stats.get('fifa_rank', 'N/A')}
 Avg goals scored: {team_stats.get('avg_goals_scored', 'N/A')} | Avg goals conceded: {team_stats.get('avg_goals_conceded', 'N/A')}
-Recent form score: {team_stats.get('recent_form', 'N/A')} | Squad value: €{team_stats.get('squad_value_m', 'N/A')}M
+Recent form score: {team_stats.get('recent_form', 'N/A')} | Squad value: ${team_stats.get('squad_value_m', 'N/A')}M
 World Cup titles: {team_stats.get('world_cup_titles', 0)}
 
 **Group {group} opponents:** {', '.join(group_opponents)}

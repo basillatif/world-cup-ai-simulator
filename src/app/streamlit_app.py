@@ -102,7 +102,9 @@ if page == "Group Analysis":
     group_stats = teams_df[teams_df["team"].isin(group_teams)][
         ["team", "elo_rating", "fifa_rank", "avg_goals_scored", "avg_goals_conceded",
          "recent_form", "squad_value_m"]
-    ].sort_values("elo_rating", ascending=False)
+    ].sort_values("elo_rating", ascending=False).rename(
+        columns={"squad_value_m": "Squad Value (USD M)"}
+    )
     st.dataframe(group_stats, use_container_width=True, hide_index=True)
 
     st.subheader("Intra-Group Match Predictions")
@@ -205,7 +207,7 @@ elif page == "Team Deep-Dive":
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("ELO Rating", int(team_stats["elo_rating"]))
     col2.metric("FIFA Rank", f"#{int(team_stats['fifa_rank'])}")
-    col3.metric("Squad Value", f"€{team_stats['squad_value_m']}M")
+    col3.metric("Squad Value", f"${team_stats['squad_value_m']}M")
     col4.metric("World Cup Titles", int(team_stats["world_cup_titles"]))
 
     col5, col6, col7 = st.columns(3)
