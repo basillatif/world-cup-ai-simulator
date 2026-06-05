@@ -12,7 +12,6 @@ import pandas as pd
 import streamlit as st
 
 from src.data.load_data import load_groups, load_matches, load_teams
-from src.features.build_features import compute_head_to_head, compute_recent_form
 from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
@@ -71,7 +70,7 @@ all_teams = sorted(teams_df["team"].tolist())
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Match Predictor", "Tournament Simulator", "Group Analysis", "Team Deep-Dive"],
+    ["Group Analysis", "Tournament Simulator", "Team Deep-Dive"],
 )
 
 api_key_input = st.sidebar.text_input(
@@ -91,123 +90,9 @@ def get_analyst() -> AnalystAgent | None:
     return None
 
 
-# ── Page: Match Predictor ─────────────────────────────────────────────────────
-
-if page == "Match Predictor":
-    st.header("Match Predictor")
-    st.markdown("Select two teams to see win/draw/loss probabilities and expected goals.")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        home = st.selectbox("Team A", all_teams, index=all_teams.index("Brazil") if "Brazil" in all_teams else 0)
-    with col2:
-        away = st.selectbox("Team B", all_teams, index=all_teams.index("France") if "France" in all_teams else 1)
-
-    neutral = st.checkbox("Neutral venue", value=True)
-
-    if home == away:
-        st.warning("Select two different teams.")
-        st.stop()
-
-    probs = predictor.predict_probs(home, away, neutral)
-    xg = predictor.expected_goals_display(home, away, neutral)
-    home_elo = predictor.elo.get(home)
-    away_elo = predictor.elo.get(away)
-
-    st.subheader("Model Output")
-    c1, c2, c3 = st.columns(3)
-    c1.metric(f"{home} Win", f"{probs['home_win']:.1%}")
-    c2.metric("Draw", f"{probs['draw']:.1%}")
-    c3.metric(f"{away} Win", f"{probs['away_win']:.1%}")
-
-    c4, c5, c6 = st.columns(3)
-    c4.metric(f"{home} xG", xg["home_xg"])
-    c5.metric("ELO Diff", f"{home_elo - away_elo:+.0f}")
-    c6.metric(f"{away} xG", xg["away_xg"])
-
-    # Head-to-head
-    h2h = compute_head_to_head(matches_df, home, away)
-    if h2h["games"] > 0:
-        st.subheader(f"Head-to-Head (last {h2h['games']} meetings)")
-        hc1, hc2, hc3 = st.columns(3)
-        hc1.metric(f"{home} Wins", h2h["a_wins"])
-        hc2.metric("Draws", h2h["draws"])
-        hc3.metric(f"{away} Wins", h2h["b_wins"])
-
-    # AI Analysis
-    analyst = get_analyst()
-    if analyst:
-        with st.expander("Claude Analyst Commentary", expanded=True):
-            with st.spinner("Asking Claude to explain the model's prediction..."):
-                try:
-                    commentary = analyst.match_preview(
-                        home_team=home,
-                        away_team=away,
-                        home_win_prob=probs["home_win"],
-                        draw_prob=probs["draw"],
-                        away_win_prob=probs["away_win"],
-                        home_xg=xg["home_xg"],
-                        away_xg=xg["away_xg"],
-                        elo_diff=home_elo - away_elo,
-                    )
-                    st.markdown(commentary)
-                except Exception as e:
-                    st.error(f"Claude API error: {e}")
-    else:
-        st.info("Add your Anthropic API key in the sidebar to enable Claude analyst commentary.")
-
-
-# ── Page: Tournament Simulator ────────────────────────────────────────────────
-
-elif page == "Tournament Simulator":
-    st.header("Monte Carlo Tournament Simulator")
-
-    n_sims = st.slider("Number of simulations", 1_000, 20_000, 5_000, step=1_000,
-                        help="~0.7s per 1 000 sims. 5 000 gives stable results in ~3.5s.")
-    seed = st.number_input("Random seed", value=42, min_value=0)
-
-    if st.button("Run Simulation", type="primary"):
-        with st.spinner(f"Running {n_sims:,} simulations..."):
-            results = run_monte_carlo(
-                groups_df=groups_df,
-                predictor=predictor,
-                n_simulations=n_sims,
-                seed=int(seed),
-            )
-        st.session_state["sim_results"] = results
-        st.success(f"Done! {n_sims:,} tournaments simulated.")
-
-    if "sim_results" in st.session_state:
-        results = st.session_state["sim_results"]
-        probs = results["probabilities"]
-
-        st.subheader("Championship Probabilities")
-        rows = []
-        for team, p in sorted(probs.items(), key=lambda x: x[1]["champion"], reverse=True):
-            rows.append({
-                "Team": team,
-                "Win WC": f"{p['champion']:.1%}",
-                "Reach Final": f"{p['final']:.1%}",
-                "Reach SF": f"{p['semifinal']:.1%}",
-                "Reach QF": f"{p['quarterfinal']:.1%}",
-                "Reach R16": f"{p['round_of_16']:.1%}",
-                "Reach R32": f"{p['round_of_32']:.1%}",
-                "Advance Group": f"{p['group_advance']:.1%}",
-            })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-        # Top 8 bar chart
-        st.subheader("Top 8 Contenders — Win Probability")
-        top8 = results["top_contenders"]
-        chart_df = pd.DataFrame(
-            {"Team": [t for t, _ in top8], "Win Probability": [p["champion"] for _, p in top8]}
-        ).set_index("Team")
-        st.bar_chart(chart_df)
-
-
 # ── Page: Group Analysis ──────────────────────────────────────────────────────
 
-elif page == "Group Analysis":
+if page == "Group Analysis":
     st.header("Group Stage Analysis")
 
     selected_group = st.selectbox("Select Group", sorted(groups_df["group"].unique()))
@@ -257,6 +142,54 @@ elif page == "Group Analysis":
                         st.markdown(commentary)
                     except Exception as e:
                         st.error(f"Claude API error: {e}")
+
+
+# ── Page: Tournament Simulator ────────────────────────────────────────────────
+
+elif page == "Tournament Simulator":
+    st.header("Monte Carlo Tournament Simulator")
+
+    n_sims = st.slider("Number of simulations", 1_000, 20_000, 5_000, step=1_000,
+                        help="~0.7s per 1 000 sims. 5 000 gives stable results in ~3.5s.")
+    seed = st.number_input("Random seed", value=42, min_value=0)
+
+    if st.button("Run Simulation", type="primary"):
+        with st.spinner(f"Running {n_sims:,} simulations..."):
+            results = run_monte_carlo(
+                groups_df=groups_df,
+                predictor=predictor,
+                n_simulations=n_sims,
+                seed=int(seed),
+            )
+        st.session_state["sim_results"] = results
+        st.success(f"Done! {n_sims:,} tournaments simulated.")
+
+    if "sim_results" in st.session_state:
+        results = st.session_state["sim_results"]
+        probs = results["probabilities"]
+
+        st.subheader("Championship Probabilities")
+        rows = []
+        for team, p in sorted(probs.items(), key=lambda x: x[1]["champion"], reverse=True):
+            rows.append({
+                "Team": team,
+                "Win WC": f"{p['champion']:.1%}",
+                "Reach Final": f"{p['final']:.1%}",
+                "Reach SF": f"{p['semifinal']:.1%}",
+                "Reach QF": f"{p['quarterfinal']:.1%}",
+                "Reach R16": f"{p['round_of_16']:.1%}",
+                "Reach R32": f"{p['round_of_32']:.1%}",
+                "Advance Group": f"{p['group_advance']:.1%}",
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+        # Top 8 bar chart
+        st.subheader("Top 8 Contenders — Win Probability")
+        top8 = results["top_contenders"]
+        chart_df = pd.DataFrame(
+            {"Team": [t for t, _ in top8], "Win Probability": [p["champion"] for _, p in top8]}
+        ).set_index("Team")
+        st.bar_chart(chart_df)
 
 
 # ── Page: Team Deep-Dive ──────────────────────────────────────────────────────
