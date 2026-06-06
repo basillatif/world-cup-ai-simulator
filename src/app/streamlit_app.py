@@ -80,16 +80,6 @@ page = st.sidebar.radio(
     ["Group Analysis", "Tournament Simulator", "Team Deep-Dive"],
 )
 
-api_key_input = st.sidebar.text_input(
-    "Anthropic API Key (for AI analysis)",
-    type="password",
-    help="Required for Claude analyst commentary. Leave blank to use predictions only.",
-)
-if api_key_input:
-    import os
-    os.environ["ANTHROPIC_API_KEY"] = api_key_input
-
-
 def get_analyst() -> AnalystAgent | None:
     import os
     if os.environ.get("ANTHROPIC_API_KEY"):
@@ -310,7 +300,7 @@ elif page == "Team Deep-Dive":
     if "sim_results" in st.session_state and st.button("Get Claude Tournament Outlook"):
         analyst = get_analyst()
         if not analyst:
-            st.warning("Add your Anthropic API key to enable this.")
+            st.warning("Set ANTHROPIC_API_KEY to enable this.")
         else:
             team_probs = st.session_state["sim_results"]["probabilities"].get(selected_team, {})
             group_opponents = [
