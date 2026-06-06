@@ -151,6 +151,15 @@ Runs N full 2026-style tournaments end-to-end:
 
 All prompts explicitly tell Claude the model has already made the prediction and its job is explanation only.
 
+Group Analysis narration is cached in `cache/group_analysis_cache.json`. The cache
+stores only Claude-written narration for pre-computed group advance probabilities;
+the statistical model remains the sole source of predictions. To clear the local
+persistent narration cache, run the app with:
+
+```bash
+CLEAR_GROUP_ANALYSIS_CACHE=1 .venv/bin/streamlit run src/app/streamlit_app.py
+```
+
 ---
 
 ## Configuration

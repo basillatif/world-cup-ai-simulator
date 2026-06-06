@@ -11,7 +11,14 @@ sys.path.insert(0, str(Path(__file__).parents[2]))
 import pandas as pd
 import streamlit as st
 
+from cache.narration_cache import (
+    LIVE_NARRATION_UNAVAILABLE,
+    cache_key,
+    canonical_probabilities,
+    get_or_create_group_analysis,
+)
 from src.data.load_data import load_groups, load_matches, load_teams
+from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
 from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
@@ -90,6 +97,22 @@ def get_analyst() -> AnalystAgent | None:
     return None
 
 
+@st.cache_data(show_spinner=False)
+def generate_group_analysis_live(
+    narration_cache_key: str,
+    group: str,
+    teams: tuple[str, ...],
+    rounded_advance_probs: tuple[tuple[str, float], ...],
+) -> str:
+    _ = narration_cache_key
+    analyst = AnalystAgent(teams_df=teams_df, matches_df=matches_df)
+    return analyst.group_summary(
+        group=group,
+        teams=list(teams),
+        advance_probs=dict(rounded_advance_probs),
+    )
+
+
 # ── Page: Group Analysis ──────────────────────────────────────────────────────
 
 if page == "Group Analysis":
@@ -128,22 +151,65 @@ if page == "Group Analysis":
         with st.spinner("Simulating..."):
             quick = run_monte_carlo(groups_df=groups_df, predictor=predictor, n_simulations=1_000, seed=0)
         advance = {t: quick["probabilities"][t]["group_advance"] for t in group_teams}
+        st.session_state["group_advance_estimate"] = {
+            "group": selected_group,
+            "teams": group_teams,
+            "advance": advance,
+        }
+        st.session_state.pop("group_analysis_narration", None)
+
+    estimate = st.session_state.get("group_advance_estimate")
+    if estimate and estimate["group"] == selected_group:
+        advance = estimate["advance"]
+        estimate_teams = estimate["teams"]
         for t, p in sorted(advance.items(), key=lambda x: x[1], reverse=True):
             st.metric(t, f"{p:.1%}")
 
-        analyst = get_analyst()
-        if analyst:
-            with st.expander("Claude Group Analysis"):
-                with st.spinner("Generating group analysis..."):
-                    try:
-                        commentary = analyst.group_summary(
-                            group=selected_group,
-                            teams=group_teams,
-                            advance_probs=advance,
-                        )
-                        st.markdown(commentary)
-                    except Exception as e:
-                        st.error(f"Claude API error: {e}")
+        if st.button("Claude Group Analysis"):
+            import os
+
+            rounded_advance = canonical_probabilities(advance)
+            rounded_items = tuple(rounded_advance.items())
+            narration_cache_key = cache_key(
+                group=selected_group,
+                probabilities=advance,
+                model=CLAUDE_MODEL,
+            )
+
+            def live_narration() -> str:
+                return generate_group_analysis_live(
+                    narration_cache_key,
+                    selected_group,
+                    tuple(estimate_teams),
+                    rounded_items,
+                )
+
+            with st.spinner("Generating group analysis..."):
+                try:
+                    commentary, status = get_or_create_group_analysis(
+                        group=selected_group,
+                        probabilities=advance,
+                        has_api_key=bool(os.environ.get("ANTHROPIC_API_KEY")),
+                        live_narration=live_narration,
+                        model=CLAUDE_MODEL,
+                    )
+                except Exception as e:
+                    st.error(f"Claude API error: {e}")
+                else:
+                    st.session_state["group_analysis_narration"] = {
+                        "group": selected_group,
+                        "narration": commentary,
+                        "status": status,
+                    }
+
+        narration_state = st.session_state.get("group_analysis_narration")
+        if narration_state and narration_state["group"] == selected_group:
+            if narration_state["status"] == "hit":
+                st.caption("Claude Group Analysis served from cache.")
+            elif narration_state["status"] == "unavailable":
+                st.warning(LIVE_NARRATION_UNAVAILABLE)
+            if narration_state["narration"]:
+                st.markdown(narration_state["narration"])
 
 
 # ── Page: Tournament Simulator ────────────────────────────────────────────────
