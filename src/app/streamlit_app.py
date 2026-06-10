@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -80,9 +81,40 @@ page = st.sidebar.radio(
     ["Group Analysis", "Tournament Simulator", "Team Deep-Dive"],
 )
 
+
+def configured_anthropic_api_key() -> str | None:
+    api_key_input = st.sidebar.text_input(
+        "Anthropic API Key (for AI analysis)",
+        type="password",
+        help=(
+            "Used only for Claude commentary. You can also set "
+            "ANTHROPIC_API_KEY or add it to .streamlit/secrets.toml."
+        ),
+    )
+    if api_key_input:
+        os.environ["ANTHROPIC_API_KEY"] = api_key_input
+        return api_key_input
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        return api_key
+
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+    except Exception:
+        api_key = None
+
+    if api_key:
+        os.environ["ANTHROPIC_API_KEY"] = str(api_key)
+        return str(api_key)
+    return None
+
+
+anthropic_api_key = configured_anthropic_api_key()
+
+
 def get_analyst() -> AnalystAgent | None:
-    import os
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    if anthropic_api_key:
         return AnalystAgent(teams_df=teams_df, matches_df=matches_df)
     return None
 
@@ -156,8 +188,6 @@ if page == "Group Analysis":
             st.metric(t, f"{p:.1%}")
 
         if st.button("Claude Group Analysis"):
-            import os
-
             rounded_advance = canonical_probabilities(advance)
             rounded_items = tuple(rounded_advance.items())
             narration_cache_key = cache_key(
@@ -179,7 +209,7 @@ if page == "Group Analysis":
                     commentary, status = get_or_create_group_analysis(
                         group=selected_group,
                         probabilities=advance,
-                        has_api_key=bool(os.environ.get("ANTHROPIC_API_KEY")),
+                        has_api_key=bool(anthropic_api_key),
                         live_narration=live_narration,
                         model=CLAUDE_MODEL,
                     )

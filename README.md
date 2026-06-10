@@ -88,8 +88,16 @@ python -m pip install -e ".[dev]"
 
 ### 2. Set your API key (optional — needed only for Claude commentary)
 
+Enter the key in the app sidebar, or configure it before launching the app:
+
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Streamlit secrets are also supported via `.streamlit/secrets.toml`:
+
+```toml
+ANTHROPIC_API_KEY = "sk-ant-..."
 ```
 
 ### 3. Run the Streamlit app
