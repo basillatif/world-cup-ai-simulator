@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" viewBox="0 0 800 1020" font-family="ui-sans-serif, system-ui, sans-serif">
+  <title>World Cup AI Simulator — Architecture</title>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ar-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1020" fill="#f9fafb" rx="12"/>
+
+  <!-- TITLE -->
+  <text x="400" y="36" text-anchor="middle" font-size="20" font-weight="600" fill="#111827">World Cup AI Simulator</text>
+  <text x="400" y="56" text-anchor="middle" font-size="12" fill="#6b7280">Python 3.11 · Streamlit · Anthropic Claude API · 34 tests passing</text>
+
+  <!-- ─── DATA LAYER ─── -->
+  <text x="48" y="78" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="1.5">DATA LAYER</text>
+
+  <!-- teams.csv -->
+  <rect x="48" y="84" width="200" height="58" rx="7" fill="#f3f4f6" stroke="#d1d5db" stroke-width="0.75"/>
+  <text x="148" y="107" text-anchor="middle" font-size="13" font-weight="600" fill="#374151">teams.csv</text>
+  <text x="148" y="126" text-anchor="middle" font-size="11" fill="#6b7280">32 teams · ELO ratings</text>
+
+  <!-- matches.csv -->
+  <rect x="268" y="84" width="210" height="58" rx="7" fill="#f3f4f6" stroke="#d1d5db" stroke-width="0.75"/>
+  <text x="373" y="107" text-anchor="middle" font-size="13" font-weight="600" fill="#374151">matches.csv</text>
+  <text x="373" y="126" text-anchor="middle" font-size="11" fill="#6b7280">historical match data</text>
+
+  <!-- groups.csv -->
+  <rect x="498" y="84" width="254" height="58" rx="7" fill="#f3f4f6" stroke="#d1d5db" stroke-width="0.75"/>
+  <text x="625" y="107" text-anchor="middle" font-size="13" font-weight="600" fill="#374151">groups.csv</text>
+  <text x="625" y="126" text-anchor="middle" font-size="11" fill="#6b7280">WC tournament draw</text>
+
+  <!-- Arrow to load_data -->
+  <line x1="400" y1="142" x2="400" y2="156" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- load_data.py -->
+  <rect x="230" y="156" width="340" height="46" rx="7" fill="#f3f4f6" stroke="#d1d5db" stroke-width="0.75"/>
+  <text x="400" y="174" text-anchor="middle" font-size="13" font-weight="600" fill="#374151">src/data/load_data.py</text>
+  <text x="400" y="191" text-anchor="middle" font-size="11" fill="#6b7280">validates schema · parses dates</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="202" x2="400" y2="218" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ─── FEATURE ENGINEERING ─── -->
+  <text x="48" y="231" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="1.5">FEATURE ENGINEERING</text>
+
+  <rect x="180" y="238" width="440" height="52" rx="7" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="0.75"/>
+  <text x="400" y="259" text-anchor="middle" font-size="13" font-weight="600" fill="#065f46">src/features/build_features.py</text>
+  <text x="400" y="278" text-anchor="middle" font-size="11" fill="#047857">H2H records · rolling form · matchup vectors</text>
+
+  <line x1="400" y1="290" x2="400" y2="308" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ─── MODEL LAYER ─── -->
+  <text x="48" y="322" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="1.5">MODEL LAYER</text>
+
+  <!-- ELO box -->
+  <rect x="48" y="330" width="310" height="128" rx="7" fill="#e6fffa" stroke="#81e6d9" stroke-width="0.75"/>
+  <text x="203" y="354" text-anchor="middle" font-size="13" font-weight="600" fill="#234e52">src/models/elo.py</text>
+  <text x="203" y="373" text-anchor="middle" font-size="11" fill="#285e61">World Football ELO</text>
+  <text x="203" y="391" text-anchor="middle" font-size="11" fill="#285e61">K-factor: 60 WC · 20 friendly</text>
+  <text x="203" y="409" text-anchor="middle" font-size="11" fill="#285e61">100pt home · goal diff multiplier</text>
+  <text x="203" y="427" text-anchor="middle" font-size="11" fill="#285e61">P(win) · P(draw) · P(loss)</text>
+  <!-- ELO badge -->
+  <rect x="58" y="336" width="56" height="16" rx="4" fill="#2c7a7b"/>
+  <text x="86" y="348" text-anchor="middle" font-size="9" font-weight="600" fill="#e6fffa">ELO MODEL</text>
+
+  <!-- Poisson box -->
+  <rect x="442" y="330" width="310" height="128" rx="7" fill="#e6fffa" stroke="#81e6d9" stroke-width="0.75"/>
+  <text x="597" y="354" text-anchor="middle" font-size="13" font-weight="600" fill="#234e52">src/models/poisson_model.py</text>
+  <text x="597" y="373" text-anchor="middle" font-size="11" fill="#285e61">Dixon-Coles attack/defense</text>
+  <text x="597" y="391" text-anchor="middle" font-size="11" fill="#285e61">MLE fit on match history</text>
+  <text x="597" y="409" text-anchor="middle" font-size="11" fill="#285e61">xG: home × attack × defense</text>
+  <text x="597" y="427" text-anchor="middle" font-size="11" fill="#285e61">score matrix · outcome probs</text>
+  <!-- Poisson badge -->
+  <rect x="452" y="336" width="70" height="16" rx="4" fill="#2c7a7b"/>
+  <text x="487" y="348" text-anchor="middle" font-size="9" font-weight="600" fill="#e6fffa">POISSON MODEL</text>
+
+  <!-- Weight labels -->
+  <text x="158" y="474" text-anchor="middle" font-size="11" fill="#6b7280">45% weight</text>
+  <text x="642" y="474" text-anchor="middle" font-size="11" fill="#6b7280">55% weight</text>
+
+  <!-- Merge paths: ELO + Poisson → MatchPredictor -->
+  <path d="M 203 458 L 203 484 L 400 484 L 400 496" fill="none" stroke="#2c7a7b" stroke-width="1.75" marker-end="url(#ar-teal)"/>
+  <path d="M 597 458 L 597 484 L 400 484 L 400 496" fill="none" stroke="#2c7a7b" stroke-width="1.75" marker-end="url(#ar-teal)"/>
+
+  <!-- MatchPredictor -->
+  <rect x="180" y="496" width="440" height="52" rx="7" fill="#ccfbf1" stroke="#2dd4bf" stroke-width="0.75"/>
+  <text x="400" y="517" text-anchor="middle" font-size="13" font-weight="600" fill="#134e4a">src/models/match_predictor.py</text>
+  <text x="400" y="537" text-anchor="middle" font-size="11" fill="#0f766e">ELO 45% · Poisson 55% · blended probs + xG</text>
+
+  <line x1="400" y1="548" x2="400" y2="566" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ─── SIMULATION LAYER ─── -->
+  <text x="48" y="580" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="1.5">SIMULATION LAYER</text>
+
+  <rect x="100" y="588" width="600" height="68" rx="7" fill="#e6fffa" stroke="#81e6d9" stroke-width="0.75"/>
+  <text x="400" y="612" text-anchor="middle" font-size="13" font-weight="600" fill="#234e52">src/simulation/tournament_simulator.py</text>
+  <text x="400" y="633" text-anchor="middle" font-size="11" fill="#285e61">10,000 Monte Carlo · group stage → R16 → QF → SF → 3rd place play-off → Final</text>
+  <!-- Simulator badge -->
+  <rect x="110" y="594" width="68" height="16" rx="4" fill="#2c7a7b"/>
+  <text x="144" y="606" text-anchor="middle" font-size="9" font-weight="600" fill="#e6fffa">MONTE CARLO</text>
+
+  <line x1="400" y1="656" x2="400" y2="674" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ─── BOUNDARY SEPARATOR ─── -->
+  <line x1="48" y1="692" x2="252" y2="692" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <rect x="253" y="681" width="294" height="22" rx="11" fill="#7c3aed"/>
+  <text x="400" y="695" text-anchor="middle" font-size="11" font-weight="600" fill="#ede9fe" letter-spacing="0.3">model predicts · claude explains</text>
+  <line x1="549" y1="692" x2="752" y2="692" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5 3"/>
+
+  <!-- ─── GENAI ANALYST LAYER ─── -->
+  <text x="48" y="716" font-size="10" font-weight="500" fill="#7c3aed" letter-spacing="1.5" opacity="0.8">GENAI ANALYST LAYER</text>
+
+  <rect x="100" y="724" width="600" height="90" rx="7" fill="#ede9fe" stroke="#c4b5fd" stroke-width="0.75"/>
+  <!-- Genai badge -->
+  <rect x="110" y="730" width="68" height="16" rx="4" fill="#7c3aed"/>
+  <text x="144" y="742" text-anchor="middle" font-size="9" font-weight="600" fill="#ede9fe">CLAUDE API</text>
+  <text x="400" y="753" text-anchor="middle" font-size="13" font-weight="600" fill="#4c1d95">src/genai/analyst_agent.py</text>
+  <text x="400" y="772" text-anchor="middle" font-size="11" fill="#5b21b6">claude-sonnet-4-6 · receives model outputs, narrates why</text>
+  <text x="400" y="791" text-anchor="middle" font-size="11" fill="#6d28d9">match preview · tournament outlook · group summary · upset alert</text>
+
+  <line x1="400" y1="814" x2="400" y2="832" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ─── PRESENTATION LAYER ─── -->
+  <text x="48" y="845" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="1.5">PRESENTATION LAYER</text>
+
+  <!-- 4 Streamlit tabs -->
+  <rect x="48" y="854" width="162" height="48" rx="7" fill="#fff1f2" stroke="#fda4af" stroke-width="0.75"/>
+  <text x="129" y="877" text-anchor="middle" font-size="12" font-weight="600" fill="#9f1239">Match Predictor</text>
+  <text x="129" y="893" text-anchor="middle" font-size="10" fill="#be123c">probs · xG · H2H</text>
+
+  <rect x="222" y="854" width="162" height="48" rx="7" fill="#fff1f2" stroke="#fda4af" stroke-width="0.75"/>
+  <text x="303" y="877" text-anchor="middle" font-size="12" font-weight="600" fill="#9f1239">Tournament Sim</text>
+  <text x="303" y="893" text-anchor="middle" font-size="10" fill="#be123c">probability table</text>
+
+  <rect x="396" y="854" width="162" height="48" rx="7" fill="#fff1f2" stroke="#fda4af" stroke-width="0.75"/>
+  <text x="477" y="877" text-anchor="middle" font-size="12" font-weight="600" fill="#9f1239">Group Analysis</text>
+  <text x="477" y="893" text-anchor="middle" font-size="10" fill="#be123c">fixtures · advance %</text>
+
+  <rect x="570" y="854" width="182" height="48" rx="7" fill="#fff1f2" stroke="#fda4af" stroke-width="0.75"/>
+  <text x="661" y="877" text-anchor="middle" font-size="12" font-weight="600" fill="#9f1239">Team Deep-Dive</text>
+  <text x="661" y="893" text-anchor="middle" font-size="10" fill="#be123c">stats · Claude outlook</text>
+
+  <!-- Footer label -->
+  <text x="400" y="960" text-anchor="middle" font-size="10" fill="#d1d5db">streamlit_app.py · 4-tab dashboard</text>
+
+  <!-- Color legend -->
+  <rect x="48" y="974" width="12" height="12" rx="2" fill="#e6fffa" stroke="#2c7a7b" stroke-width="0.75"/>
+  <text x="64" y="984" font-size="10" fill="#6b7280">Statistical engine (ELO · Poisson · Monte Carlo)</text>
+  <rect x="320" y="974" width="12" height="12" rx="2" fill="#ede9fe" stroke="#7c3aed" stroke-width="0.75"/>
+  <text x="336" y="984" font-size="10" fill="#6b7280">GenAI analyst layer (Claude)</text>
+  <rect x="520" y="974" width="12" height="12" rx="2" fill="#fff1f2" stroke="#fda4af" stroke-width="0.75"/>
+  <text x="536" y="984" font-size="10" fill="#6b7280">Presentation (Streamlit)</text>
+</svg>
