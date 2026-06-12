@@ -22,6 +22,13 @@ def load_matches(path: str | Path | None = None) -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
+def load_results(path: str | Path | None = None) -> pd.DataFrame:
+    path = Path(path) if path else SAMPLE_DIR / "results.csv"
+    df = pd.read_csv(path, parse_dates=["date"])
+    _validate_matches(df)
+    return df.sort_values("date").reset_index(drop=True)
+
+
 def load_groups(path: str | Path | None = None) -> pd.DataFrame:
     path = Path(path) if path else SAMPLE_DIR / "groups.csv"
     df = pd.read_csv(path)

@@ -84,6 +84,7 @@ def simulate_group_stage(
     prob_table: dict[tuple[str, str], tuple[float, float, float]],
     goals_table: dict[tuple[str, str], tuple[float, float]],
     rng: np.random.Generator,
+    completed_results: dict[frozenset[str], tuple[str, str, int, int]] | None = None,
 ) -> dict[str, list[GroupResult]]:
     """Simulate group stage. Returns group → [1st…4th] GroupResult list."""
     standings: dict[str, list[GroupResult]] = {}
@@ -93,6 +94,12 @@ def simulate_group_stage(
 
         for i, t1 in enumerate(teams):
             for t2 in teams[i + 1:]:
+                completed = (completed_results or {}).get(frozenset((t1, t2)))
+                if completed:
+                    home, away, hg, ag = completed
+                    _update_table(table, home, away, hg, ag)
+                    continue
+
                 hw, d, aw = prob_table[(t1, t2)]
                 lam_h, lam_a = goals_table[(t1, t2)]
 
@@ -253,6 +260,7 @@ def run_monte_carlo(
     predictor: MatchPredictor,
     n_simulations: int = 10_000,
     seed: int | None = 42,
+    completed_results_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """
     Run `n_simulations` full 2026 World Cup simulations.
@@ -271,20 +279,36 @@ def run_monte_carlo(
     }
     # Pairwise outcome + expected-goals tables (~250 ms for 48 teams)
     prob_table, goals_table = _build_prob_table(all_teams, predictor)
+    completed_results = {}
+    if completed_results_df is not None:
+        for row in completed_results_df.itertuples(index=False):
+            completed_results[frozenset((row.home_team, row.away_team))] = (
+                row.home_team,
+                row.away_team,
+                int(row.home_goals),
+                int(row.away_goals),
+            )
     # ─────────────────────────────────────────────────────────────────────────
 
     counters: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     stage_keys = [
-        "group_advance", "round_of_32", "round_of_16",
+        "group_winner", "group_advance", "round_of_32", "round_of_16",
         "quarterfinal", "semifinal", "final", "champion",
     ]
 
     for _ in range(n_simulations):
-        standings = simulate_group_stage(group_structure, prob_table, goals_table, rng)
+        standings = simulate_group_stage(
+            group_structure,
+            prob_table,
+            goals_table,
+            rng,
+            completed_results=completed_results,
+        )
         knockout  = simulate_knockout_stage(standings, prob_table, rng)
 
         # Group advancement: top 2 from each group + 8 best 3rd-place
         for ranked in standings.values():
+            counters[ranked[0].team]["group_winner"] += 1
             for r in ranked[:2]:
                 counters[r.team]["group_advance"] += 1
         for t in _select_best_third_place(standings, n=8):

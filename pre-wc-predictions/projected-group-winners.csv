@@ -1,0 +1,13 @@
+group,projected_group_winner,group_winner_probability,group_advance_probability
+A,Mexico,0.3258,0.8084
+B,Switzerland,0.576,0.9338
+C,Brazil,0.7064,0.9858
+D,United States,0.4386,0.8436
+E,Germany,0.6054,0.9582
+F,Netherlands,0.5766,0.9388
+G,Belgium,0.727,0.9704
+H,Spain,0.6706,0.9682
+I,France,0.7022,0.972
+J,Argentina,0.7454,0.976
+K,Portugal,0.6976,0.9726
+L,England,0.6752,0.977

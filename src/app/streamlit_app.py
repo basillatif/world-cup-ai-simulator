@@ -18,12 +18,13 @@ from cache.narration_cache import (
     canonical_probabilities,
     get_or_create_group_analysis,
 )
-from src.data.load_data import load_groups, load_matches, load_teams
+from src.data.load_data import load_groups, load_matches, load_results, load_teams
 from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
 from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
 from src.models.poisson_model import build_poisson_from_teams
+from src.simulation.prediction_store import save_predictions
 from src.simulation.tournament_simulator import run_monte_carlo
 
 
@@ -49,28 +50,31 @@ st.caption(
 def load_all_data():
     teams = load_teams()
     matches = load_matches()
+    results = load_results()
     groups = load_groups()
-    return teams, matches, groups
+    return teams, matches, results, groups
 
 
 @st.cache_resource
 def build_models():
     # Zero-argument cache — avoids Streamlit pickling DataFrames on every
     # rerun just to compute the cache key, which was the source of slowness.
-    _teams, _matches, _ = load_all_data()
-    elo = build_elo_from_seed(_teams, _matches)
+    _teams, _matches, _results, _ = load_all_data()
+    model_matches = pd.concat([_matches, _results], ignore_index=True)
+    elo = build_elo_from_seed(_teams, model_matches)
     poisson = build_poisson_from_teams(_teams)
-    if len(_matches) > 20:
+    if len(model_matches) > 20:
         try:
-            poisson.fit(_matches)
+            poisson.fit(model_matches)
         except Exception:
             pass  # fall back to team-seeded model
     return MatchPredictor(elo=elo, poisson=poisson)
 
 
 with st.spinner("Loading data and building models…"):
-    teams_df, matches_df, groups_df = load_all_data()
+    teams_df, matches_df, results_df, groups_df = load_all_data()
     predictor = build_models()
+match_history_df = pd.concat([matches_df, results_df], ignore_index=True).sort_values("date")
 all_teams = sorted(teams_df["team"].tolist())
 
 
@@ -78,7 +82,7 @@ all_teams = sorted(teams_df["team"].tolist())
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Group Analysis", "Tournament Simulator", "Team Deep-Dive"],
+    ["Group Analysis", "Tournament Results", "Tournament Simulator", "Team Deep-Dive"],
 )
 
 
@@ -115,7 +119,7 @@ anthropic_api_key = configured_anthropic_api_key()
 
 def get_analyst() -> AnalystAgent | None:
     if anthropic_api_key:
-        return AnalystAgent(teams_df=teams_df, matches_df=matches_df)
+        return AnalystAgent(teams_df=teams_df, matches_df=match_history_df)
     return None
 
 
@@ -127,7 +131,7 @@ def generate_group_analysis_live(
     rounded_advance_probs: tuple[tuple[str, float], ...],
 ) -> str:
     _ = narration_cache_key
-    analyst = AnalystAgent(teams_df=teams_df, matches_df=matches_df)
+    analyst = AnalystAgent(teams_df=teams_df, matches_df=match_history_df)
     return analyst.group_summary(
         group=group,
         teams=list(teams),
@@ -156,10 +160,27 @@ if page == "Group Analysis":
     rows = []
     for i, t1 in enumerate(group_teams):
         for t2 in group_teams[i + 1:]:
+            completed = results_df[
+                ((results_df["home_team"] == t1) & (results_df["away_team"] == t2))
+                | ((results_df["home_team"] == t2) & (results_df["away_team"] == t1))
+            ]
+            if not completed.empty:
+                result = completed.iloc[-1]
+                rows.append({
+                    "Match": f"{t1} vs {t2}",
+                    "Status": "Final",
+                    "Result": (
+                        f"{result['home_team']} {int(result['home_goals'])}–"
+                        f"{int(result['away_goals'])} {result['away_team']}"
+                    ),
+                })
+                continue
+
             p = predictor.predict_probs(t1, t2, neutral=True)
             xg = predictor.expected_goals_display(t1, t2, neutral=True)
             rows.append({
                 "Match": f"{t1} vs {t2}",
+                "Status": "Upcoming",
                 f"{t1} Win": f"{p['home_win']:.1%}",
                 "Draw": f"{p['draw']:.1%}",
                 f"{t2} Win": f"{p['away_win']:.1%}",
@@ -232,6 +253,28 @@ if page == "Group Analysis":
                 st.markdown(narration_state["narration"])
 
 
+# ── Page: Tournament Results ──────────────────────────────────────────────────
+
+elif page == "Tournament Results":
+    st.header("Tournament Results")
+    st.caption("Completed matches are locked into all new tournament simulations.")
+
+    display_results = results_df.copy()
+    display_results["Date"] = display_results["date"].dt.strftime("%b %d, %Y")
+    display_results["Match"] = display_results["home_team"] + " vs " + display_results["away_team"]
+    display_results["Score"] = (
+        display_results["home_goals"].astype(str)
+        + "–"
+        + display_results["away_goals"].astype(str)
+    )
+    display_results = display_results.rename(columns={"group": "Group"})
+    st.dataframe(
+        display_results[["Date", "Group", "Match", "Score"]],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 # ── Page: Tournament Simulator ────────────────────────────────────────────────
 
 elif page == "Tournament Simulator":
@@ -248,9 +291,17 @@ elif page == "Tournament Simulator":
                 predictor=predictor,
                 n_simulations=n_sims,
                 seed=int(seed),
+                completed_results_df=results_df,
             )
+            saved_predictions = save_predictions(results, seed=int(seed))
         st.session_state["sim_results"] = results
+        st.session_state["saved_predictions"] = saved_predictions
         st.success(f"Done! {n_sims:,} tournaments simulated.")
+        st.caption(
+            "Saved locally to "
+            f"`pre-wc-predictions/{saved_predictions['json'].name}` and "
+            f"`pre-wc-predictions/{saved_predictions['csv'].name}`."
+        )
 
     if "sim_results" in st.session_state:
         results = st.session_state["sim_results"]
@@ -261,6 +312,7 @@ elif page == "Tournament Simulator":
         for team, p in sorted(probs.items(), key=lambda x: x[1]["champion"], reverse=True):
             rows.append({
                 "Team": team,
+                "Win Group": f"{p['group_winner']:.1%}",
                 "Win WC": f"{p['champion']:.1%}",
                 "Reach Final": f"{p['final']:.1%}",
                 "Reach SF": f"{p['semifinal']:.1%}",
@@ -302,8 +354,9 @@ elif page == "Team Deep-Dive":
     col7.metric("Recent Form", team_stats["recent_form"])
 
     # Recent results from match history
-    mask = (matches_df["home_team"] == selected_team) | (matches_df["away_team"] == selected_team)
-    recent_matches = matches_df[mask].tail(8).sort_values("date", ascending=False)
+    mask = ((match_history_df["home_team"] == selected_team)
+            | (match_history_df["away_team"] == selected_team))
+    recent_matches = match_history_df[mask].tail(8).sort_values("date", ascending=False)
     if not recent_matches.empty:
         st.subheader("Recent Results")
         display_rows = []

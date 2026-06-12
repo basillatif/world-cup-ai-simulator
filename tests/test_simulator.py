@@ -144,6 +144,29 @@ class TestGroupStage:
         for ranked in standings.values():
             assert {result.played for result in ranked} == {3}
 
+    def test_completed_result_is_locked_into_group_table(self):
+        completed = {
+            frozenset((TEAMS[0], TEAMS[1])): (TEAMS[0], TEAMS[1], 2, 0)
+        }
+        scoreless_goals = {
+            matchup: (0.0, 0.0) for matchup in self.goals_table
+        }
+        all_draws = {
+            matchup: (0.0, 1.0, 0.0) for matchup in self.prob_table
+        }
+        standings = simulate_group_stage(
+            GROUP_STRUCTURE,
+            all_draws,
+            scoreless_goals,
+            np.random.default_rng(0),
+            completed_results=completed,
+        )
+        by_team = {result.team: result for result in standings["A"]}
+        assert by_team[TEAMS[0]].gf == 2
+        assert by_team[TEAMS[0]].points == 5
+        assert by_team[TEAMS[1]].ga == 2
+        assert by_team[TEAMS[1]].points == 2
+
 
 # -- simulate_knockout_stage ---------------------------------------------------
 
@@ -219,6 +242,7 @@ class TestMonteCarlo:
         results = run_monte_carlo(GROUPS, self.predictor, n_simulations=300, seed=2)
         probabilities = results["probabilities"]
 
+        assert abs(sum(p["group_winner"] for p in probabilities.values()) - 12.0) < 0.05
         assert abs(sum(p["group_advance"] for p in probabilities.values()) - 32.0) < 0.05
         assert abs(sum(p["round_of_32"] for p in probabilities.values()) - 32.0) < 0.05
         assert abs(sum(p["round_of_16"] for p in probabilities.values()) - 16.0) < 0.05
@@ -231,6 +255,11 @@ class TestMonteCarlo:
         results = run_monte_carlo(GROUPS, self.predictor, n_simulations=500, seed=3)
         for probabilities in results["probabilities"].values():
             assert probabilities["group_advance"] >= probabilities["champion"] - 0.01
+
+    def test_group_advance_greater_than_group_winner(self):
+        results = run_monte_carlo(GROUPS, self.predictor, n_simulations=500, seed=6)
+        for probabilities in results["probabilities"].values():
+            assert probabilities["group_advance"] >= probabilities["group_winner"]
 
     def test_top_contenders_length(self):
         results = run_monte_carlo(GROUPS, self.predictor, n_simulations=200, seed=4)
