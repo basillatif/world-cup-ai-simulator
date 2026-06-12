@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 from src.models.match_predictor import MatchPredictor
+from src.simulation.live_tracker import build_locked_group_results
 
 
 # ---------------------------------------------------------------------------
@@ -279,15 +280,11 @@ def run_monte_carlo(
     }
     # Pairwise outcome + expected-goals tables (~250 ms for 48 teams)
     prob_table, goals_table = _build_prob_table(all_teams, predictor)
-    completed_results = {}
-    if completed_results_df is not None:
-        for row in completed_results_df.itertuples(index=False):
-            completed_results[frozenset((row.home_team, row.away_team))] = (
-                row.home_team,
-                row.away_team,
-                int(row.home_goals),
-                int(row.away_goals),
-            )
+    completed_results = (
+        build_locked_group_results(completed_results_df)
+        if completed_results_df is not None
+        else {}
+    )
     # ─────────────────────────────────────────────────────────────────────────
 
     counters: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))

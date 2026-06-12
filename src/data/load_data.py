@@ -3,6 +3,8 @@
 from pathlib import Path
 import pandas as pd
 
+from src.simulation.live_tracker import normalize_results
+
 DATA_DIR = Path(__file__).parents[2] / "data"
 SAMPLE_DIR = DATA_DIR / "sample"
 
@@ -23,10 +25,10 @@ def load_matches(path: str | Path | None = None) -> pd.DataFrame:
 
 
 def load_results(path: str | Path | None = None) -> pd.DataFrame:
+    """Load actual and scheduled tournament results for the live tracker."""
     path = Path(path) if path else SAMPLE_DIR / "results.csv"
     df = pd.read_csv(path, parse_dates=["date"])
-    _validate_matches(df)
-    return df.sort_values("date").reset_index(drop=True)
+    return normalize_results(df)
 
 
 def load_groups(path: str | Path | None = None) -> pd.DataFrame:

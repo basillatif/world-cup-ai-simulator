@@ -25,6 +25,7 @@ from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
 from src.models.poisson_model import build_poisson_from_teams
 from src.simulation.prediction_store import save_predictions
+from src.simulation.live_tracker import calculate_group_standings, compare_probabilities
 from src.simulation.tournament_simulator import run_monte_carlo
 
 
@@ -60,7 +61,19 @@ def build_models():
     # Zero-argument cache — avoids Streamlit pickling DataFrames on every
     # rerun just to compute the cache key, which was the source of slowness.
     _teams, _matches, _results, _ = load_all_data()
-    model_matches = pd.concat([_matches, _results], ignore_index=True)
+    completed = _results[_results["status"].str.casefold() == "final"].rename(
+        columns={
+            "team_a": "home_team",
+            "team_b": "away_team",
+            "score_a": "home_goals",
+            "score_b": "away_goals",
+        }
+    )
+    completed["tournament"] = "FIFA World Cup 2026"
+    completed["neutral"] = True
+    model_matches = pd.concat(
+        [_matches, completed[_matches.columns]], ignore_index=True
+    )
     elo = build_elo_from_seed(_teams, model_matches)
     poisson = build_poisson_from_teams(_teams)
     if len(model_matches) > 20:
@@ -74,7 +87,21 @@ def build_models():
 with st.spinner("Loading data and building models…"):
     teams_df, matches_df, results_df, groups_df = load_all_data()
     predictor = build_models()
-match_history_df = pd.concat([matches_df, results_df], ignore_index=True).sort_values("date")
+completed_history_df = results_df[
+    results_df["status"].str.casefold() == "final"
+].rename(
+    columns={
+        "team_a": "home_team",
+        "team_b": "away_team",
+        "score_a": "home_goals",
+        "score_b": "away_goals",
+    }
+)
+completed_history_df["tournament"] = "FIFA World Cup 2026"
+completed_history_df["neutral"] = True
+match_history_df = pd.concat(
+    [matches_df, completed_history_df[matches_df.columns]], ignore_index=True
+).sort_values("date")
 all_teams = sorted(teams_df["team"].tolist())
 
 
@@ -82,7 +109,13 @@ all_teams = sorted(teams_df["team"].tolist())
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Group Analysis", "Tournament Results", "Tournament Simulator", "Team Deep-Dive"],
+    [
+        "Group Analysis",
+        "Live Tournament Tracker",
+        "Tournament Results",
+        "Tournament Simulator",
+        "Team Deep-Dive",
+    ],
 )
 
 
@@ -123,6 +156,124 @@ def get_analyst() -> AnalystAgent | None:
     return None
 
 
+def probability_table(probabilities: dict[str, dict[str, float]]) -> pd.DataFrame:
+    """Format the simulator's probability output for Streamlit tables."""
+    rows = []
+    for team, values in sorted(
+        probabilities.items(), key=lambda item: item[1]["champion"], reverse=True
+    ):
+        rows.append(
+            {
+                "Team": team,
+                "Advance Group": values["group_advance"],
+                "Reach R16": values["round_of_16"],
+                "Reach QF": values["quarterfinal"],
+                "Reach SF": values["semifinal"],
+                "Reach Final": values["final"],
+                "Win WC": values["champion"],
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def render_probability_table(probabilities: dict[str, dict[str, float]]) -> None:
+    """Render tournament probabilities using a consistent table style."""
+    table = probability_table(probabilities)
+    st.dataframe(
+        table.style.format({column: "{:.1%}" for column in table.columns if column != "Team"}),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def render_live_tournament_tracker() -> None:
+    """Render actual results, standings, live probabilities, and movers."""
+    st.header("Live Tournament Tracker")
+    st.caption(
+        "Final scores are locked into every live simulation; only remaining matches are simulated."
+    )
+
+    actual_tab, standings_tab, probabilities_tab, movers_tab = st.tabs(
+        ["Actual Results", "Live Standings", "Updated Probabilities", "Biggest Movers"]
+    )
+
+    with actual_tab:
+        display = results_df.copy()
+        display["date"] = display["date"].dt.strftime("%Y-%m-%d")
+        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.caption("The table is file-backed today and ready for a future editor or upload flow.")
+
+    with standings_tab:
+        standings = calculate_group_standings(results_df)
+        if standings.empty:
+            st.info("No final group results are available yet.")
+        else:
+            for group in standings["group"].unique():
+                st.subheader(f"Group {group}")
+                group_table = standings[standings["group"] == group].drop(columns="group")
+                st.dataframe(group_table, use_container_width=True, hide_index=True)
+
+    with probabilities_tab:
+        st.write(
+            "Run matched baseline and live simulations to isolate the effect of completed results."
+        )
+        col1, col2 = st.columns(2)
+        live_sims = col1.number_input(
+            "Simulations", min_value=500, max_value=20_000, value=5_000, step=500
+        )
+        live_seed = col2.number_input(
+            "Comparison seed", min_value=0, value=42, key="live_tracker_seed"
+        )
+        if st.button("Recalculate Live Probabilities", type="primary"):
+            with st.spinner(f"Running two sets of {int(live_sims):,} simulations..."):
+                baseline = run_monte_carlo(
+                    groups_df=groups_df,
+                    predictor=predictor,
+                    n_simulations=int(live_sims),
+                    seed=int(live_seed),
+                )
+                updated = run_monte_carlo(
+                    groups_df=groups_df,
+                    predictor=predictor,
+                    n_simulations=int(live_sims),
+                    seed=int(live_seed),
+                    completed_results_df=results_df,
+                )
+            st.session_state["live_tracker_results"] = {
+                "baseline": baseline,
+                "updated": updated,
+            }
+
+        live_results = st.session_state.get("live_tracker_results")
+        if live_results:
+            render_probability_table(live_results["updated"]["probabilities"])
+        else:
+            st.info("Recalculate to view probabilities based on the latest final results.")
+
+    with movers_tab:
+        live_results = st.session_state.get("live_tracker_results")
+        if not live_results:
+            st.info("Recalculate live probabilities first to see the biggest movers.")
+        else:
+            movers = compare_probabilities(
+                live_results["baseline"]["probabilities"],
+                live_results["updated"]["probabilities"],
+            )
+            percent_columns = [column for column in movers.columns if column != "team"]
+
+            def highlight_change(value: float) -> str:
+                if value > 0:
+                    return "color: #14833b; font-weight: 600"
+                if value < 0:
+                    return "color: #c62828; font-weight: 600"
+                return ""
+
+            styled = movers.style.format(
+                {column: "{:+.1%}" if column.endswith("change") else "{:.1%}" for column in percent_columns}
+            ).map(highlight_change, subset=["advance_prob_change", "title_prob_change"])
+            st.dataframe(styled, use_container_width=True, hide_index=True)
+
+
 @st.cache_data(show_spinner=False)
 def generate_group_analysis_live(
     narration_cache_key: str,
@@ -161,8 +312,11 @@ if page == "Group Analysis":
     for i, t1 in enumerate(group_teams):
         for t2 in group_teams[i + 1:]:
             completed = results_df[
-                ((results_df["home_team"] == t1) & (results_df["away_team"] == t2))
-                | ((results_df["home_team"] == t2) & (results_df["away_team"] == t1))
+                (results_df["status"].str.casefold() == "final")
+                & (
+                    ((results_df["team_a"] == t1) & (results_df["team_b"] == t2))
+                    | ((results_df["team_a"] == t2) & (results_df["team_b"] == t1))
+                )
             ]
             if not completed.empty:
                 result = completed.iloc[-1]
@@ -170,8 +324,8 @@ if page == "Group Analysis":
                     "Match": f"{t1} vs {t2}",
                     "Status": "Final",
                     "Result": (
-                        f"{result['home_team']} {int(result['home_goals'])}–"
-                        f"{int(result['away_goals'])} {result['away_team']}"
+                        f"{result['team_a']} {int(result['score_a'])}–"
+                        f"{int(result['score_b'])} {result['team_b']}"
                     ),
                 })
                 continue
@@ -253,6 +407,12 @@ if page == "Group Analysis":
                 st.markdown(narration_state["narration"])
 
 
+# ── Page: Live Tournament Tracker ─────────────────────────────────────────────
+
+elif page == "Live Tournament Tracker":
+    render_live_tournament_tracker()
+
+
 # ── Page: Tournament Results ──────────────────────────────────────────────────
 
 elif page == "Tournament Results":
@@ -261,11 +421,11 @@ elif page == "Tournament Results":
 
     display_results = results_df.copy()
     display_results["Date"] = display_results["date"].dt.strftime("%b %d, %Y")
-    display_results["Match"] = display_results["home_team"] + " vs " + display_results["away_team"]
+    display_results["Match"] = display_results["team_a"] + " vs " + display_results["team_b"]
     display_results["Score"] = (
-        display_results["home_goals"].astype(str)
+        display_results["score_a"].astype("Int64").astype(str)
         + "–"
-        + display_results["away_goals"].astype(str)
+        + display_results["score_b"].astype("Int64").astype(str)
     )
     display_results = display_results.rename(columns={"group": "Group"})
     st.dataframe(
@@ -308,20 +468,7 @@ elif page == "Tournament Simulator":
         probs = results["probabilities"]
 
         st.subheader("Championship Probabilities")
-        rows = []
-        for team, p in sorted(probs.items(), key=lambda x: x[1]["champion"], reverse=True):
-            rows.append({
-                "Team": team,
-                "Win Group": f"{p['group_winner']:.1%}",
-                "Win WC": f"{p['champion']:.1%}",
-                "Reach Final": f"{p['final']:.1%}",
-                "Reach SF": f"{p['semifinal']:.1%}",
-                "Reach QF": f"{p['quarterfinal']:.1%}",
-                "Reach R16": f"{p['round_of_16']:.1%}",
-                "Reach R32": f"{p['round_of_32']:.1%}",
-                "Advance Group": f"{p['group_advance']:.1%}",
-            })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        render_probability_table(probs)
 
         # Top 8 bar chart
         st.subheader("Top 8 Contenders — Win Probability")
