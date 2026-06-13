@@ -18,6 +18,9 @@ env/
 .env
 .env.*
 
+# API keys
+api_keys/
+
 # Data – raw/processed (keep sample data)
 data/raw/*
 data/processed/*
