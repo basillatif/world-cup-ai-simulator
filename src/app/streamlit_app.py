@@ -24,12 +24,13 @@ from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
 from src.models.poisson_model import build_poisson_from_teams
-from src.simulation.prediction_store import save_predictions
+from src.simulation.live_scorecard import render_live_scorecard
 from src.simulation.live_tracker import (
     calculate_group_standings,
     compare_probabilities,
     normalize_results,
 )
+from src.simulation.prediction_store import save_predictions
 from src.simulation.tournament_simulator import run_monte_carlo
 
 
@@ -116,6 +117,7 @@ page = st.sidebar.radio(
     "Navigate",
     [
         "Group Analysis",
+        "Live Scorecard",
         "Live Tournament Tracker",
         "Tournament Results",
         "Tournament Simulator",
@@ -410,6 +412,12 @@ if page == "Group Analysis":
                 st.warning(LIVE_NARRATION_UNAVAILABLE)
             if narration_state["narration"]:
                 st.markdown(narration_state["narration"])
+
+
+# ── Page: Live Scorecard ──────────────────────────────────────────────────────
+
+elif page == "Live Scorecard":
+    render_live_scorecard()
 
 
 # ── Page: Live Tournament Tracker ─────────────────────────────────────────────
