@@ -3,8 +3,6 @@
 from pathlib import Path
 import pandas as pd
 
-from src.simulation.live_tracker import normalize_results
-
 DATA_DIR = Path(__file__).parents[2] / "data"
 SAMPLE_DIR = DATA_DIR / "sample"
 
@@ -26,6 +24,8 @@ def load_matches(path: str | Path | None = None) -> pd.DataFrame:
 
 def load_results(path: str | Path | None = None) -> pd.DataFrame:
     """Load actual and scheduled tournament results for the live tracker."""
+    from src.simulation.live_tracker import normalize_results
+
     path = Path(path) if path else SAMPLE_DIR / "results.csv"
     df = pd.read_csv(path, parse_dates=["date"])
     return normalize_results(df)
