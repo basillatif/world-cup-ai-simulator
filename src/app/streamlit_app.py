@@ -18,7 +18,7 @@ from cache.narration_cache import (
     canonical_probabilities,
     get_or_create_group_analysis,
 )
-from src.data.load_data import load_groups, load_matches, load_results, load_teams
+from src.data.load_data import load_groups, load_matches, load_teams
 from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
 from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
@@ -51,7 +51,8 @@ st.caption(
 def load_all_data():
     teams = load_teams()
     matches = load_matches()
-    results = load_results()
+    results_path = Path(__file__).parents[2] / "data" / "sample" / "results.csv"
+    results = normalize_results(pd.read_csv(results_path, parse_dates=["date"]))
     groups = load_groups()
     return teams, matches, results, groups
 
