@@ -51,8 +51,8 @@ def _fetch_matches(api_key: str, status: str) -> list[dict[str, Any]]:
 
 
 def fetch_live_match(api_key: str) -> dict[str, Any] | None:
-    """Return the current live match, checking LIVE then IN_PLAY."""
-    for status in ("LIVE", "IN_PLAY"):
+    """Return the current live match, checking LIVE, IN_PLAY, then PAUSED (half-time)."""
+    for status in ("LIVE", "IN_PLAY", "PAUSED"):
         matches = _fetch_matches(api_key, status)
         if matches:
             return matches[0]
