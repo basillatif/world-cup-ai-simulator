@@ -25,7 +25,11 @@ from src.models.elo import build_elo_from_seed
 from src.models.match_predictor import MatchPredictor
 from src.models.poisson_model import build_poisson_from_teams
 from src.simulation.prediction_store import save_predictions
-from src.simulation.live_tracker import calculate_group_standings, compare_probabilities
+from src.simulation.live_tracker import (
+    calculate_group_standings,
+    compare_probabilities,
+    normalize_results,
+)
 from src.simulation.tournament_simulator import run_monte_carlo
 
 
