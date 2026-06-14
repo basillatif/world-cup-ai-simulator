@@ -68,7 +68,13 @@ def _fetch_football_data() -> pd.DataFrame:
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
     groups_df = load_groups()
-    rows = [_football_data_match_to_row(match, groups_df) for match in matches]
+    rows = [
+        _football_data_match_to_row(match, groups_df)
+        for match in matches
+        if match.get("homeTeam", {}).get("name") and match.get("awayTeam", {}).get("name")
+    ]
+    if not rows:
+        return pd.DataFrame(columns=RESULT_COLUMNS)
     return normalize_results(pd.DataFrame(rows))
 
 

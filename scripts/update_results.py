@@ -64,6 +64,8 @@ def main() -> None:
         print("No changes — results.csv is already up to date.")
         return
 
+    for column in ("score_a", "score_b"):
+        merged[column] = merged[column].astype("Int64")
     merged.to_csv(results_path, index=False)
 
     for row in added:

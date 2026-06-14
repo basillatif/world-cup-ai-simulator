@@ -32,8 +32,10 @@ RESULTS_COLUMNS = ["date", "stage", "group", "team_a", "team_b", "score_a", "sco
 # football-data.org team names that differ from the names used in
 # data/sample/groups.csv, data/sample/teams.csv, and results.csv.
 NAME_MAP = {
-    "United States": "USA",
     "Bosnia-Herzegovina": "Bosnia and Herzegovina",
+    "Cape Verde Islands": "Cape Verde",
+    "Congo DR": "DR Congo",
+    "Curaçao": "Curacao",
 }
 
 STAGE_MAP = {
