@@ -109,10 +109,28 @@ def _football_data_match_to_row(match: dict[str, Any], groups_df: pd.DataFrame) 
 def validate_results(df: pd.DataFrame) -> pd.DataFrame:
     """Validate fetched results and return them normalized.
 
-    Final rows must have integer scores and a winner that is team_a, team_b,
-    or "Draw". Raises ValueError on violation.
+    - Final rows must have integer scores and a winner that is team_a,
+      team_b, or "Draw".
+    - Both teams in every row must exist in the app's group/team data.
+    - No two rows within the same stage may be the same fixture.
+
+    Raises ValueError on violation.
     """
     normalized = normalize_results(df)
+
+    known_teams = set(load_groups()["team"])
+    for row in normalized.itertuples(index=False):
+        unknown = {row.team_a, row.team_b} - known_teams
+        if unknown:
+            raise ValueError(f"Unknown team(s) in results data: {sorted(unknown)}")
+
+    seen_fixtures: set[tuple[str, frozenset[str]]] = set()
+    for row in normalized.itertuples(index=False):
+        fixture = (str(row.stage), frozenset((row.team_a, row.team_b)))
+        if fixture in seen_fixtures:
+            raise ValueError(f"Duplicate fixture: {row.team_a} vs {row.team_b} ({row.stage})")
+        seen_fixtures.add(fixture)
+
     finals = normalized[normalized["status"].astype(str).str.casefold() == "final"]
     for row in finals.itertuples(index=False):
         if pd.isna(row.score_a) or pd.isna(row.score_b):

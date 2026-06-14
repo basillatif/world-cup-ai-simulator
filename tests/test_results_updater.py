@@ -72,6 +72,21 @@ def test_validate_results_rejects_non_integer_scores():
         validate_results(df)
 
 
+def test_validate_results_rejects_unknown_team():
+    df = pd.DataFrame([_row(team_a="Atlantis", winner="Atlantis")])
+    with pytest.raises(ValueError):
+        validate_results(df)
+
+
+def test_validate_results_rejects_duplicate_fixture():
+    df = pd.DataFrame([
+        _row(),
+        _row(date="2026-06-12", score_a=1, score_b=1, winner="Draw"),
+    ])
+    with pytest.raises(ValueError):
+        validate_results(df)
+
+
 # -- merge_results -----------------------------------------------------------------
 
 def test_merge_adds_new_match():
