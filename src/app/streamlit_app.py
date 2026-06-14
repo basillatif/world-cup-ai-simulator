@@ -118,12 +118,12 @@ all_teams = sorted(teams_df["team"].tolist())
 page = st.sidebar.radio(
     "Navigate",
     [
-        "Group Analysis",
         "Live Scorecard",
         "Live Tournament Tracker",
         "Tournament Results",
         "Tournament Simulator",
         "Team Deep-Dive",
+        "Group Analysis",
     ],
 )
 
