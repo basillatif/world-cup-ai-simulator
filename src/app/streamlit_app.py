@@ -19,6 +19,7 @@ from cache.narration_cache import (
     get_or_create_group_analysis,
 )
 from src.data.load_data import load_groups, load_matches, load_teams
+from src.data.results_updater import fetch_and_merge_results
 from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
 from src.genai.analyst_agent import AnalystAgent
 from src.models.elo import build_elo_from_seed
@@ -52,17 +53,18 @@ st.caption(
 
 # ── Data & model loading (cached) ─────────────────────────────────────────────
 
-@st.cache_data
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_all_data():
     teams = load_teams()
     matches = load_matches()
     results_path = Path(__file__).parents[2] / "data" / "sample" / "results.csv"
-    results = normalize_results(pd.read_csv(results_path, parse_dates=["date"]))
+    base_results = normalize_results(pd.read_csv(results_path, parse_dates=["date"]))
+    results = fetch_and_merge_results(base_results)
     groups = load_groups()
     return teams, matches, results, groups
 
 
-@st.cache_resource
+@st.cache_resource(ttl=3600)
 def build_models():
     # Zero-argument cache — avoids Streamlit pickling DataFrames on every
     # rerun just to compute the cache key, which was the source of slowness.
@@ -197,8 +199,14 @@ def render_live_tournament_tracker() -> None:
     """Render actual results, standings, live probabilities, and movers."""
     st.header("Live Tournament Tracker")
     st.caption(
-        "Final scores are locked into every live simulation; only remaining matches are simulated."
+        "Final scores are locked into every live simulation; only remaining matches are simulated. "
+        "Results refresh automatically at least once an hour."
     )
+
+    if st.button("🔄 Refresh latest results"):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.rerun()
 
     actual_tab, standings_tab, probabilities_tab, movers_tab = st.tabs(
         ["Actual Results", "Live Standings", "Updated Probabilities", "Biggest Movers"]
