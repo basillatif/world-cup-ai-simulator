@@ -180,7 +180,10 @@ class TestKnockoutStage:
             self.goals_table,
             rng,
         )
-        self.result = simulate_knockout_stage(self.standings, self.prob_table, rng)
+        elo = EloRatings()
+        for team in TEAMS:
+            elo.set(team, 1500.0)
+        self.result = simulate_knockout_stage(self.standings, self.prob_table, rng, elo)
 
     def test_champion_is_a_tournament_team(self):
         assert self.result["champion"] in TEAMS

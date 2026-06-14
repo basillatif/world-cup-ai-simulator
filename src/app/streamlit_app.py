@@ -483,12 +483,13 @@ elif page == "Tournament Simulator":
         st.subheader("Championship Probabilities")
         render_probability_table(probs)
 
-        # Top 8 bar chart
-        st.subheader("Top 8 Contenders — Win Probability")
+        # Top 5 bar chart
+        st.subheader("Top 5 Contenders — Win Probability")
         top8 = results["top_contenders"]
         chart_df = pd.DataFrame(
             {"Team": [t for t, _ in top8], "Win Probability": [p["champion"] for _, p in top8]}
         ).set_index("Team")
+        chart_df = chart_df.sort_values("Win Probability", ascending=False).head(5)
         st.bar_chart(chart_df)
 
 

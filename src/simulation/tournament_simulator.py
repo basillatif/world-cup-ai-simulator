@@ -20,6 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from src.models.elo import EloRatings
 from src.models.match_predictor import MatchPredictor
 from src.simulation.live_tracker import build_locked_group_results
 
@@ -179,6 +180,48 @@ def _select_best_third_place(
 # Knockout stage
 # ---------------------------------------------------------------------------
 
+# Standard 16-slot single-elimination seeding order: bracket_slot_order[i] is
+# the 1-indexed seed placed in slot i, arranged so seed 1 and seed 2 can only
+# meet in the final, seeds 1-4 can only meet from the semifinals on, etc.
+_BRACKET_SLOT_ORDER = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11]
+
+
+def _seed_round_of_32_pairs(
+    group_winners: list[str],
+    runners_up: list[str],
+    best_thirds: list[str],
+    elo: EloRatings,
+) -> list[tuple[str, str]]:
+    """Pot-based R32 pairing: group winners vs. weaker non-winners, with the
+    16 resulting matchups placed in the bracket so the strongest teams are
+    kept apart for as long as possible.
+    """
+    # Pot 1: group winners, strongest first.
+    pot1 = sorted(group_winners, key=lambda t: elo.get(t), reverse=True)
+    # Pot 2: runners-up + best thirds, strongest first.
+    pot2 = sorted(runners_up + best_thirds, key=lambda t: elo.get(t), reverse=True)
+
+    # Split pot 2 so each group winner faces one of the weakest pot-2 teams,
+    # leaving the strongest leftover pot-2 teams to play each other.
+    n_extra = len(pot2) - len(pot1)
+    strong_pot2 = pot2[:n_extra]
+    weak_pot2 = pot2[n_extra:]
+    matchups = [
+        (pot1[i], weak_pot2[len(weak_pot2) - 1 - i]) for i in range(len(pot1))
+    ]
+    for i in range(len(strong_pot2) // 2):
+        matchups.append((strong_pot2[i], strong_pot2[len(strong_pot2) - 1 - i]))
+
+    # Rank matchups by their strongest team's Elo (best matchup first) and
+    # place them into bracket slots so top matchups are maximally separated.
+    matchups.sort(key=lambda m: max(elo.get(m[0]), elo.get(m[1])), reverse=True)
+    slots: list[tuple[str, str] | None] = [None] * len(matchups)
+    for seed, matchup in enumerate(matchups, start=1):
+        slot = _BRACKET_SLOT_ORDER.index(seed)
+        slots[slot] = matchup
+    return slots
+
+
 def _knockout_match(
     team_a: str,
     team_b: str,
@@ -211,6 +254,7 @@ def simulate_knockout_stage(
     group_standings: dict[str, list[GroupResult]],
     prob_table: dict[tuple[str, str], tuple[float, float, float]],
     rng: np.random.Generator,
+    elo: EloRatings,
 ) -> dict[str, Any]:
     """R32 → R16 → QF → SF → Final."""
     groups = sorted(group_standings.keys())
@@ -218,9 +262,7 @@ def simulate_knockout_stage(
     runners_up    = [group_standings[g][1].team for g in groups]
     best_thirds   = _select_best_third_place(group_standings, n=8)
 
-    seeds = group_winners + runners_up + best_thirds  # 32 teams
-    n = len(seeds)
-    r32_pairs = [(seeds[i], seeds[n - 1 - i]) for i in range(n // 2)]
+    r32_pairs = _seed_round_of_32_pairs(group_winners, runners_up, best_thirds, elo)
 
     r32_winners, r16_pairs  = _play_round(r32_pairs, prob_table, rng)
     r16_winners, qf_pairs   = _play_round(r16_pairs, prob_table, rng)
@@ -301,7 +343,7 @@ def run_monte_carlo(
             rng,
             completed_results=completed_results,
         )
-        knockout  = simulate_knockout_stage(standings, prob_table, rng)
+        knockout  = simulate_knockout_stage(standings, prob_table, rng, predictor.elo)
 
         # Group advancement: top 2 from each group + 8 best 3rd-place
         for ranked in standings.values():
