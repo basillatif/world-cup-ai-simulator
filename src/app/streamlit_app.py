@@ -18,6 +18,15 @@ from cache.narration_cache import (
     canonical_probabilities,
     get_or_create_group_analysis,
 )
+from src.app.ui_components import (
+    apply_custom_theme,
+    get_flag,
+    render_group_card,
+    render_hero_header,
+    render_match_card,
+    render_metric_card,
+    render_probability_bar,
+)
 from src.data.load_data import load_groups, load_matches, load_teams
 from src.data.results_updater import fetch_and_merge_results
 from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
@@ -44,7 +53,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("⚽ World Cup AI Simulator")
+apply_custom_theme()
+
+render_hero_header(subtitle="Monte Carlo Tournament Simulations & Live Probability Tracking")
 st.caption(
     "Monte Carlo tournament engine + Claude analyst layer. "
     "**GenAI explains the model. It does not replace it.**"
@@ -196,7 +207,7 @@ def render_probability_table(probabilities: dict[str, dict[str, float]]) -> None
 
 
 def render_live_tournament_tracker() -> None:
-    """Render actual results, standings, live probabilities, and movers."""
+    """Render standings, live probabilities, and movers."""
     st.header("Live Tournament Tracker")
     st.caption(
         "Final scores are locked into every live simulation; only remaining matches are simulated. "
@@ -208,25 +219,25 @@ def render_live_tournament_tracker() -> None:
         st.cache_resource.clear()
         st.rerun()
 
-    actual_tab, standings_tab, probabilities_tab, movers_tab = st.tabs(
-        ["Actual Results", "Live Standings", "Updated Probabilities", "Biggest Movers"]
+    standings_tab, probabilities_tab, movers_tab = st.tabs(
+        ["Live Standings", "Updated Probabilities", "Biggest Movers"]
     )
-
-    with actual_tab:
-        display = results_df.copy()
-        display["date"] = display["date"].dt.strftime("%Y-%m-%d")
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        st.caption("The table is file-backed today and ready for a future editor or upload flow.")
 
     with standings_tab:
         standings = calculate_group_standings(results_df)
         if standings.empty:
             st.info("No final group results are available yet.")
         else:
-            for group in standings["group"].unique():
-                st.subheader(f"Group {group}")
-                group_table = standings[standings["group"] == group].drop(columns="group")
-                st.dataframe(group_table, use_container_width=True, hide_index=True)
+            groups_in_order = sorted(standings["group"].unique())
+            cols = st.columns(2)
+            for i, group in enumerate(groups_in_order):
+                group_table = (
+                    standings[standings["group"] == group]
+                    .drop(columns="group")
+                    .reset_index(drop=True)
+                )
+                with cols[i % 2]:
+                    render_group_card(group, group_table)
 
     with probabilities_tab:
         st.write(
@@ -375,7 +386,7 @@ if page == "Group Analysis":
         advance = estimate["advance"]
         estimate_teams = estimate["teams"]
         for t, p in sorted(advance.items(), key=lambda x: x[1], reverse=True):
-            st.metric(t, f"{p:.1%}")
+            render_probability_bar(f"{get_flag(t)} {t}", p, accent="gold" if p >= 0.5 else "blue")
 
         if st.button("Claude Group Analysis"):
             rounded_advance = canonical_probabilities(advance)
@@ -440,20 +451,34 @@ elif page == "Tournament Results":
     st.header("Tournament Results")
     st.caption("Completed matches are locked into all new tournament simulations.")
 
-    display_results = results_df.copy()
-    display_results["Date"] = display_results["date"].dt.strftime("%b %d, %Y")
-    display_results["Match"] = display_results["team_a"] + " vs " + display_results["team_b"]
-    display_results["Score"] = (
-        display_results["score_a"].astype("Int64").astype(str)
-        + "–"
-        + display_results["score_b"].astype("Int64").astype(str)
-    )
-    display_results = display_results.rename(columns={"group": "Group"})
-    st.dataframe(
-        display_results[["Date", "Group", "Match", "Score"]],
-        use_container_width=True,
-        hide_index=True,
-    )
+    display_results = results_df.copy().sort_values("date")
+    for match_date, day_matches in display_results.groupby(display_results["date"].dt.date):
+        st.markdown(f"**{match_date.strftime('%b %d, %Y')}**")
+        for row in day_matches.itertuples(index=False):
+            render_match_card(
+                team_a=row.team_a,
+                team_b=row.team_b,
+                score_a=row.score_a,
+                score_b=row.score_b,
+                status=row.status,
+                group=row.group,
+            )
+
+    with st.expander("View results as a table"):
+        table = display_results.copy()
+        table["Date"] = table["date"].dt.strftime("%b %d, %Y")
+        table["Match"] = table["team_a"] + " vs " + table["team_b"]
+        table["Score"] = (
+            table["score_a"].astype("Int64").astype(str)
+            + "–"
+            + table["score_b"].astype("Int64").astype(str)
+        )
+        table = table.rename(columns={"group": "Group"})
+        st.dataframe(
+            table[["Date", "Group", "Match", "Score"]],
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 # ── Page: Tournament Simulator ────────────────────────────────────────────────
@@ -498,6 +523,10 @@ elif page == "Tournament Simulator":
             {"Team": [t for t, _ in top8], "Win Probability": [p["champion"] for _, p in top8]}
         ).set_index("Team")
         chart_df = chart_df.sort_values("Win Probability", ascending=False).head(5)
+
+        for team, row in chart_df["Win Probability"].items():
+            render_probability_bar(f"{get_flag(team)} {team}", row, accent="gold")
+
         st.bar_chart(chart_df)
 
 
@@ -512,15 +541,22 @@ elif page == "Team Deep-Dive":
     team_group = team_group_row["group"].iloc[0] if not team_group_row.empty else "N/A"
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("ELO Rating", int(team_stats["elo_rating"]))
-    col2.metric("FIFA Rank", f"#{int(team_stats['fifa_rank'])}")
-    col3.metric("Squad Value", f"${team_stats['squad_value_m']}M")
-    col4.metric("World Cup Titles", int(team_stats["world_cup_titles"]))
+    with col1:
+        render_metric_card("ELO Rating", str(int(team_stats["elo_rating"])), icon="📈")
+    with col2:
+        render_metric_card("FIFA Rank", f"#{int(team_stats['fifa_rank'])}", icon="🏅")
+    with col3:
+        render_metric_card("Squad Value", f"${team_stats['squad_value_m']}M", icon="💰")
+    with col4:
+        render_metric_card("World Cup Titles", str(int(team_stats["world_cup_titles"])), icon="🏆")
 
     col5, col6, col7 = st.columns(3)
-    col5.metric("Avg Goals Scored", team_stats["avg_goals_scored"])
-    col6.metric("Avg Goals Conceded", team_stats["avg_goals_conceded"])
-    col7.metric("Recent Form", team_stats["recent_form"])
+    with col5:
+        render_metric_card("Avg Goals Scored", str(team_stats["avg_goals_scored"]), icon="⚽")
+    with col6:
+        render_metric_card("Avg Goals Conceded", str(team_stats["avg_goals_conceded"]), icon="🧤")
+    with col7:
+        render_metric_card("Recent Form", str(team_stats["recent_form"]), icon="🔥")
 
     # Recent results from match history
     mask = ((match_history_df["home_team"] == selected_team)
