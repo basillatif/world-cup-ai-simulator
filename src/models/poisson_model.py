@@ -32,7 +32,7 @@ class PoissonModel:
     # Fitting
     # ------------------------------------------------------------------
 
-    def fit(self, matches_df: pd.DataFrame, min_matches: int = 3) -> "PoissonModel":
+    def fit(self, matches_df: pd.DataFrame, min_matches: int = 3, reg_lambda: float = 5.0) -> "PoissonModel":
         teams = sorted(
             set(matches_df["home_team"]) | set(matches_df["away_team"])
         )
@@ -52,7 +52,12 @@ class PoissonModel:
             lam_h = np.maximum(ha_factors * attack[home_idx] * defense[away_idx], 1e-6)
             lam_a = np.maximum(attack[away_idx] * defense[home_idx], 1e-6)
             ll = float(np.sum(poisson.logpmf(home_goals, lam_h) + poisson.logpmf(away_goals, lam_a)))
-            return -ll
+            # Ridge penalty shrinking attack/defense toward 1.0 (no special skill).
+            # With only a handful of matches per team the unregularized MLE is
+            # poorly identified and the optimizer drives some teams' ratings to
+            # the (0.1, 5.0) bounds, producing absurd score predictions.
+            penalty = reg_lambda * float(np.sum((params - 1.0) ** 2))
+            return -ll + penalty
 
         x0 = np.ones(2 * n)
         constraints = [{"type": "eq", "fun": lambda p: p[:n].mean() - 1.0}]
