@@ -193,6 +193,32 @@ def apply_custom_theme() -> None:
             color: var(--wc-muted);
             margin-top: 0.35rem;
         }}
+        .wc-champion-card {{
+            text-align: center;
+            padding: 1.75rem 1rem;
+            background: linear-gradient(160deg, rgba(255, 215, 0, 0.18), rgba(255, 215, 0, 0.03));
+            border: 1px solid rgba(255, 215, 0, 0.45);
+        }}
+        .wc-champion-label {{
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--wc-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            margin-bottom: 0.5rem;
+        }}
+        .wc-champion-flag {{ font-size: 3.5rem; line-height: 1; margin-bottom: 0.25rem; }}
+        .wc-champion-team {{
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: var(--wc-text);
+            margin-bottom: 0.35rem;
+        }}
+        .wc-champion-prob {{
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--wc-gold);
+        }}
         .wc-match-card {{ padding: 0.85rem 1.1rem; }}
         .wc-match-top {{
             display: flex;
@@ -369,6 +395,22 @@ def render_metric_card(label: str, value: str, icon: str = "", help_text: str | 
 <div class="wc-metric-icon">{icon}</div>
 <div class="wc-metric-value">{value}</div>
 <div class="wc-metric-label">{label}</div>{help_html}
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+# ── Champion card ────────────────────────────────────────────────────────────
+
+def render_champion_card(team: str, probability: float) -> None:
+    """Render a large, gold-highlighted hero card for the top simulation pick."""
+    pct = max(0.0, min(1.0, float(probability))) * 100
+    st.markdown(
+        f"""<div class="wc-card wc-champion-card">
+<div class="wc-champion-label">🏆 Predicted Champion</div>
+<div class="wc-champion-flag">{get_flag(team)}</div>
+<div class="wc-champion-team">{team}</div>
+<div class="wc-champion-prob">{pct:.1f}% win probability</div>
 </div>""",
         unsafe_allow_html=True,
     )

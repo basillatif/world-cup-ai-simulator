@@ -21,6 +21,7 @@ from cache.narration_cache import (
 from src.app.ui_components import (
     apply_custom_theme,
     get_flag,
+    render_champion_card,
     render_group_card,
     render_hero_header,
     render_match_card,
@@ -511,23 +512,23 @@ elif page == "Tournament Simulator":
 
     if "sim_results" in st.session_state:
         results = st.session_state["sim_results"]
-        probs = results["probabilities"]
+        top3 = results["top_contenders"][:3]
 
-        st.subheader("Championship Probabilities")
-        render_probability_table(probs)
+        st.subheader("🏆 Top 3 Most Likely Winners")
+        champion_team, champion_probs = top3[0]
+        render_champion_card(champion_team, champion_probs["champion"])
 
-        # Top 5 bar chart
-        st.subheader("Top 5 Contenders — Win Probability")
-        top8 = results["top_contenders"]
-        chart_df = pd.DataFrame(
-            {"Team": [t for t, _ in top8], "Win Probability": [p["champion"] for _, p in top8]}
-        ).set_index("Team")
-        chart_df = chart_df.sort_values("Win Probability", ascending=False).head(5)
-
-        for team, row in chart_df["Win Probability"].items():
-            render_probability_bar(f"{get_flag(team)} {team}", row, accent="gold")
-
-        st.bar_chart(chart_df)
+        cols = st.columns(2)
+        for col, label, icon, (team, p) in zip(
+            cols, ["2nd Most Likely", "3rd Most Likely"], ["🥈", "🥉"], top3[1:]
+        ):
+            with col:
+                render_metric_card(
+                    label=label,
+                    value=f"{get_flag(team)} {team}",
+                    icon=icon,
+                    help_text=f"{p['champion'] * 100:.1f}% win probability",
+                )
 
 
 # ── Page: Team Deep-Dive ──────────────────────────────────────────────────────
