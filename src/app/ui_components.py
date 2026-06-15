@@ -4,6 +4,13 @@ This module is presentation-only: it injects CSS and renders small HTML
 snippets via ``st.markdown(..., unsafe_allow_html=True)``. It contains no
 data loading, simulation, or prediction logic — those stay in
 ``src/data``, ``src/models``, and ``src/simulation``.
+
+Note on markdown/HTML strings: every snippet passed to ``st.markdown(...,
+unsafe_allow_html=True)`` must start with ``<`` at column 0 (no leading
+blank line or indentation) and must not contain blank lines. Markdown
+treats a line indented by 4+ spaces as a code block, and an HTML block
+ends at the first blank line — either mistake causes the raw HTML to be
+shown as literal text instead of being rendered.
 """
 
 from __future__ import annotations
@@ -16,11 +23,11 @@ import streamlit as st
 
 # ── FIFA-inspired palette ──────────────────────────────────────────────────
 
-COLOR_BG = "#0E1117"
+COLOR_BG = "#0A1F3D"
 COLOR_BLUE = "#0057B8"
 COLOR_GOLD = "#FFD700"
 COLOR_TEXT = "#F5F7FA"
-COLOR_MUTED = "#9CA3AF"
+COLOR_MUTED = "#A9B7CC"
 
 
 # ── Country flag emoji lookup ───────────────────────────────────────────────
@@ -88,50 +95,45 @@ def get_flag(team: str) -> str:
 # ── Theme ────────────────────────────────────────────────────────────────────
 
 def apply_custom_theme() -> None:
-    """Inject global CSS for the FIFA-style dark dashboard theme.
+    """Inject global CSS for the FIFA-style navy dashboard theme.
 
     Call this once, immediately after ``st.set_page_config``.
     """
     st.markdown(
-        f"""
-        <style>
+        f"""<style>
         :root {{
             --wc-bg: {COLOR_BG};
-            --wc-border: rgba(255, 255, 255, 0.08);
+            --wc-border: rgba(255, 255, 255, 0.12);
             --wc-blue: {COLOR_BLUE};
             --wc-blue-light: #3B82F6;
             --wc-gold: {COLOR_GOLD};
             --wc-text: {COLOR_TEXT};
             --wc-muted: {COLOR_MUTED};
         }}
-
-        /* ── Base app background & text ─────────────────────────────────── */
         .stApp {{
             background:
-                radial-gradient(circle at 10% 0%, rgba(0, 87, 184, 0.20), transparent 45%),
-                radial-gradient(circle at 90% 10%, rgba(255, 215, 0, 0.08), transparent 40%),
+                radial-gradient(circle at 10% 0%, rgba(0, 87, 184, 0.28), transparent 45%),
+                radial-gradient(circle at 90% 10%, rgba(255, 215, 0, 0.10), transparent 40%),
                 var(--wc-bg);
             color: var(--wc-text);
         }}
         [data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, #11161F 0%, var(--wc-bg) 100%);
+            background: linear-gradient(180deg, #123B66 0%, var(--wc-bg) 100%);
             border-right: 1px solid var(--wc-border);
         }}
         [data-testid="stHeader"] {{
-            background: rgba(14, 17, 23, 0.0);
+            background: rgba(10, 31, 61, 0.0);
         }}
         h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {{
             color: var(--wc-text);
         }}
-
-        /* ── Hero header ─────────────────────────────────────────────────── */
         .wc-hero {{
-            background: linear-gradient(135deg, rgba(0, 87, 184, 0.55) 0%, rgba(0, 30, 80, 0.65) 55%, rgba(14, 17, 23, 0.9) 100%);
+            background: linear-gradient(135deg, rgba(0, 87, 184, 0.55) 0%, rgba(0, 40, 95, 0.65) 55%, rgba(10, 31, 61, 0.92) 100%);
             border: 1px solid var(--wc-border);
             border-radius: 20px;
             padding: 1.75rem 2rem;
             margin-bottom: 1.25rem;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
             animation: wc-fade-in 0.6s ease-out;
         }}
         .wc-hero-title {{
@@ -153,25 +155,21 @@ def apply_custom_theme() -> None:
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }}
-
-        /* ── Generic card ────────────────────────────────────────────────── */
         .wc-card {{
-            background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
             border: 1px solid var(--wc-border);
             border-radius: 16px;
             padding: 1rem 1.25rem;
             margin-bottom: 0.85rem;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
             transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
             animation: wc-fade-in 0.45s ease-out;
         }}
         .wc-card:hover {{
             transform: translateY(-3px);
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
             border-color: rgba(255, 215, 0, 0.35);
         }}
-
-        /* ── Metric card ─────────────────────────────────────────────────── */
         .wc-metric-card {{
             text-align: center;
             padding: 1.1rem 0.75rem;
@@ -195,8 +193,6 @@ def apply_custom_theme() -> None:
             color: var(--wc-muted);
             margin-top: 0.35rem;
         }}
-
-        /* ── Match scoreboard card ───────────────────────────────────────── */
         .wc-match-card {{ padding: 0.85rem 1.1rem; }}
         .wc-match-top {{
             display: flex;
@@ -228,14 +224,12 @@ def apply_custom_theme() -> None:
             font-size: 1.3rem;
             font-weight: 800;
             color: var(--wc-text);
-            background: rgba(0, 87, 184, 0.25);
+            background: rgba(0, 87, 184, 0.30);
             border-radius: 10px;
             padding: 0.2rem 0.85rem;
             min-width: 90px;
             text-align: center;
         }}
-
-        /* ── Status badges ───────────────────────────────────────────────── */
         .wc-badge {{
             display: inline-flex;
             align-items: center;
@@ -247,11 +241,9 @@ def apply_custom_theme() -> None:
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }}
-        .wc-badge-final {{ background: rgba(255, 255, 255, 0.08); color: var(--wc-muted); }}
-        .wc-badge-live {{ background: rgba(239, 68, 68, 0.18); color: #FCA5A5; animation: wc-pulse 1.6s infinite; }}
-        .wc-badge-upcoming {{ background: rgba(59, 130, 246, 0.18); color: #93C5FD; }}
-
-        /* ── Group standings card ────────────────────────────────────────── */
+        .wc-badge-final {{ background: rgba(255, 255, 255, 0.10); color: var(--wc-muted); }}
+        .wc-badge-live {{ background: rgba(239, 68, 68, 0.20); color: #FCA5A5; animation: wc-pulse 1.6s infinite; }}
+        .wc-badge-upcoming {{ background: rgba(59, 130, 246, 0.20); color: #93C5FD; }}
         .wc-group-card {{ padding: 0.9rem 1rem 0.6rem; }}
         .wc-group-header {{
             font-size: 1.05rem;
@@ -277,9 +269,9 @@ def apply_custom_theme() -> None:
             font-weight: 700;
             padding-bottom: 0.3rem;
         }}
-        .wc-group-row-alt {{ background: rgba(255, 255, 255, 0.03); }}
+        .wc-group-row-alt {{ background: rgba(255, 255, 255, 0.04); }}
         .wc-group-row-qualified {{
-            background: rgba(255, 215, 0, 0.08);
+            background: rgba(255, 215, 0, 0.10);
             border: 1px solid rgba(255, 215, 0, 0.35);
         }}
         .wc-group-team {{
@@ -300,8 +292,6 @@ def apply_custom_theme() -> None:
             padding: 0.05rem 0.35rem;
             margin-right: 0.2rem;
         }}
-
-        /* ── Probability bars ────────────────────────────────────────────── */
         .wc-probbar {{ margin-bottom: 0.6rem; }}
         .wc-probbar-label {{
             display: flex;
@@ -314,7 +304,7 @@ def apply_custom_theme() -> None:
         .wc-probbar-track {{
             height: 10px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.10);
             overflow: hidden;
         }}
         .wc-bar-fill-blue, .wc-bar-fill-gold {{
@@ -324,19 +314,15 @@ def apply_custom_theme() -> None:
         }}
         .wc-bar-fill-blue {{ background: linear-gradient(90deg, var(--wc-blue), var(--wc-blue-light)); }}
         .wc-bar-fill-gold {{ background: linear-gradient(90deg, #FFB800, var(--wc-gold)); }}
-
-        /* ── Native Streamlit metric styling ─────────────────────────────── */
         [data-testid="stMetric"] {{
-            background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
             border: 1px solid var(--wc-border);
             border-radius: 16px;
             padding: 0.85rem 1rem;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
         }}
         [data-testid="stMetricValue"] {{ color: var(--wc-text); }}
         [data-testid="stMetricLabel"] {{ color: var(--wc-muted); }}
-
-        /* ── Animations ───────────────────────────────────────────────────── */
         @keyframes wc-fade-in {{
             from {{ opacity: 0; transform: translateY(8px); }}
             to {{ opacity: 1; transform: translateY(0); }}
@@ -345,8 +331,6 @@ def apply_custom_theme() -> None:
             0%, 100% {{ opacity: 1; }}
             50% {{ opacity: 0.55; }}
         }}
-
-        /* ── Mobile responsiveness ───────────────────────────────────────── */
         @media (max-width: 640px) {{
             .wc-hero {{ padding: 1.25rem 1.25rem; }}
             .wc-hero-title {{ font-size: 1.6rem; }}
@@ -355,8 +339,7 @@ def apply_custom_theme() -> None:
             .wc-team:last-child {{ text-align: center; }}
             .wc-score {{ margin: 0.3rem auto; }}
         }}
-        </style>
-        """,
+        </style>""",
         unsafe_allow_html=True,
     )
 
@@ -367,13 +350,11 @@ def render_hero_header(subtitle: str, last_updated: str | None = None) -> None:
     """Render the top-of-page hero banner."""
     timestamp = last_updated or datetime.now().strftime("%b %d, %Y · %H:%M")
     st.markdown(
-        f"""
-        <div class="wc-hero">
-            <div class="wc-hero-title">⚽ FIFA World Cup 2026 Predictor</div>
-            <div class="wc-hero-subtitle">{subtitle}</div>
-            <div class="wc-hero-meta">Last updated: {timestamp}</div>
-        </div>
-        """,
+        f"""<div class="wc-hero">
+<div class="wc-hero-title">⚽ FIFA World Cup 2026 Predictor</div>
+<div class="wc-hero-subtitle">{subtitle}</div>
+<div class="wc-hero-meta">Last updated: {timestamp}</div>
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -384,14 +365,11 @@ def render_metric_card(label: str, value: str, icon: str = "", help_text: str | 
     """Render a single KPI card. Place inside a column for a grid layout."""
     help_html = f'<div class="wc-metric-help">{help_text}</div>' if help_text else ""
     st.markdown(
-        f"""
-        <div class="wc-card wc-metric-card">
-            <div class="wc-metric-icon">{icon}</div>
-            <div class="wc-metric-value">{value}</div>
-            <div class="wc-metric-label">{label}</div>
-            {help_html}
-        </div>
-        """,
+        f"""<div class="wc-card wc-metric-card">
+<div class="wc-metric-icon">{icon}</div>
+<div class="wc-metric-value">{value}</div>
+<div class="wc-metric-label">{label}</div>{help_html}
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -438,19 +416,14 @@ def render_match_card(
     meta_html = f'<div class="wc-match-meta">{" · ".join(meta_bits)}</div>' if meta_bits else ""
 
     st.markdown(
-        f"""
-        <div class="wc-card wc-match-card">
-            <div class="wc-match-top">
-                {render_status_badge(status)}
-                {meta_html}
-            </div>
-            <div class="wc-match-row">
-                <div class="{a_class}"><span class="wc-flag">{get_flag(team_a)}</span>{team_a}</div>
-                <div class="wc-score">{score_a_disp} – {score_b_disp}</div>
-                <div class="{b_class}">{team_b}<span class="wc-flag">{get_flag(team_b)}</span></div>
-            </div>
-        </div>
-        """,
+        f"""<div class="wc-card wc-match-card">
+<div class="wc-match-top">{render_status_badge(status)}{meta_html}</div>
+<div class="wc-match-row">
+<div class="{a_class}"><span class="wc-flag">{get_flag(team_a)}</span>{team_a}</div>
+<div class="wc-score">{score_a_disp} – {score_b_disp}</div>
+<div class="{b_class}">{team_b}<span class="wc-flag">{get_flag(team_b)}</span></div>
+</div>
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -464,7 +437,7 @@ def render_group_card(group_name: str, standings_df: pd.DataFrame, highlight_n: 
     goals_for, goals_against, goal_diff, points (already sorted by rank).
     The top ``highlight_n`` rows are highlighted as qualifiers.
     """
-    rows_html = []
+    rows_html = ""
     for i, row in enumerate(standings_df.itertuples(index=False)):
         is_top = i < highlight_n
         row_classes = ["wc-group-row"]
@@ -474,32 +447,27 @@ def render_group_card(group_name: str, standings_df: pd.DataFrame, highlight_n: 
             row_classes.append("wc-group-row-alt")
         badge = '<span class="wc-qualify-badge">Q</span>' if is_top else ""
 
-        rows_html.append(
-            f"""
-            <div class="{' '.join(row_classes)}">
-                <div class="wc-group-team">{badge}<span class="wc-flag">{get_flag(row.team)}</span>{row.team}</div>
-                <div class="wc-group-stat">{row.played}</div>
-                <div class="wc-group-stat">{row.wins}-{row.draws}-{row.losses}</div>
-                <div class="wc-group-stat">{int(row.goal_diff):+d}</div>
-                <div class="wc-group-stat wc-group-points">{row.points}</div>
-            </div>
-            """
+        rows_html += (
+            f'<div class="{" ".join(row_classes)}">'
+            f'<div class="wc-group-team">{badge}<span class="wc-flag">{get_flag(row.team)}</span>{row.team}</div>'
+            f'<div class="wc-group-stat">{row.played}</div>'
+            f'<div class="wc-group-stat">{row.wins}-{row.draws}-{row.losses}</div>'
+            f'<div class="wc-group-stat">{int(row.goal_diff):+d}</div>'
+            f'<div class="wc-group-stat wc-group-points">{row.points}</div>'
+            f'</div>'
         )
 
     st.markdown(
-        f"""
-        <div class="wc-card wc-group-card">
-            <div class="wc-group-header">Group {group_name}</div>
-            <div class="wc-group-row wc-group-row-header">
-                <div class="wc-group-team">Team</div>
-                <div class="wc-group-stat">P</div>
-                <div class="wc-group-stat">W-D-L</div>
-                <div class="wc-group-stat">GD</div>
-                <div class="wc-group-stat wc-group-points">Pts</div>
-            </div>
-            {''.join(rows_html)}
-        </div>
-        """,
+        f"""<div class="wc-card wc-group-card">
+<div class="wc-group-header">Group {group_name}</div>
+<div class="wc-group-row wc-group-row-header">
+<div class="wc-group-team">Team</div>
+<div class="wc-group-stat">P</div>
+<div class="wc-group-stat">W-D-L</div>
+<div class="wc-group-stat">GD</div>
+<div class="wc-group-stat wc-group-points">Pts</div>
+</div>{rows_html}
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -511,16 +479,14 @@ def render_probability_bar(label: str, value: float, accent: str = "blue") -> No
     pct = max(0.0, min(1.0, float(value))) * 100
     fill_class = "wc-bar-fill-gold" if accent == "gold" else "wc-bar-fill-blue"
     st.markdown(
-        f"""
-        <div class="wc-probbar">
-            <div class="wc-probbar-label">
-                <span>{label}</span>
-                <span class="wc-probbar-value">{pct:.1f}%</span>
-            </div>
-            <div class="wc-probbar-track">
-                <div class="{fill_class}" style="width: {pct:.2f}%;"></div>
-            </div>
-        </div>
-        """,
+        f"""<div class="wc-probbar">
+<div class="wc-probbar-label">
+<span>{label}</span>
+<span class="wc-probbar-value">{pct:.1f}%</span>
+</div>
+<div class="wc-probbar-track">
+<div class="{fill_class}" style="width: {pct:.2f}%;"></div>
+</div>
+</div>""",
         unsafe_allow_html=True,
     )
