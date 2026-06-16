@@ -357,6 +357,107 @@ def apply_custom_theme() -> None:
             0%, 100% {{ opacity: 1; }}
             50% {{ opacity: 0.55; }}
         }}
+        .wc-pred-card {{ padding: 1rem 1.25rem; }}
+        .wc-pred-meta {{
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.75rem;
+            color: var(--wc-muted);
+            margin-bottom: 0.65rem;
+            flex-wrap: wrap;
+        }}
+        .wc-pred-teams {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }}
+        .wc-pred-team {{
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--wc-text);
+        }}
+        .wc-pred-team-b {{ text-align: right; }}
+        .wc-pred-vs {{
+            font-size: 0.8rem;
+            color: var(--wc-muted);
+            font-weight: 600;
+            flex-shrink: 0;
+            padding: 0 0.25rem;
+        }}
+        .wc-pred-probs {{
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.4rem;
+            margin-bottom: 0.7rem;
+        }}
+        .wc-pred-prob-cell {{
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--wc-border);
+            border-radius: 10px;
+            text-align: center;
+            padding: 0.45rem 0.3rem;
+        }}
+        .wc-pred-prob-cell-highlight {{
+            background: rgba(0, 87, 184, 0.20);
+            border-color: rgba(59, 130, 246, 0.45);
+        }}
+        .wc-pred-prob-label {{
+            font-size: 0.68rem;
+            color: var(--wc-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.2rem;
+        }}
+        .wc-pred-prob-value {{
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--wc-text);
+        }}
+        .wc-pred-footer {{
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }}
+        .wc-pred-scoreline {{
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--wc-gold);
+            background: rgba(255, 215, 0, 0.12);
+            border: 1px solid rgba(255, 215, 0, 0.30);
+            border-radius: 6px;
+            padding: 0.15rem 0.55rem;
+            white-space: nowrap;
+        }}
+        .wc-pred-confidence-high {{
+            font-size: 0.72rem; font-weight: 700;
+            background: rgba(20, 131, 59, 0.20); color: #86EFAC;
+            border: 1px solid rgba(20, 131, 59, 0.35);
+            border-radius: 6px; padding: 0.15rem 0.55rem; white-space: nowrap;
+        }}
+        .wc-pred-confidence-medium {{
+            font-size: 0.72rem; font-weight: 700;
+            background: rgba(234, 179, 8, 0.20); color: #FDE047;
+            border: 1px solid rgba(234, 179, 8, 0.35);
+            border-radius: 6px; padding: 0.15rem 0.55rem; white-space: nowrap;
+        }}
+        .wc-pred-confidence-low {{
+            font-size: 0.72rem; font-weight: 700;
+            background: rgba(148, 163, 184, 0.15); color: var(--wc-muted);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 6px; padding: 0.15rem 0.55rem; white-space: nowrap;
+        }}
+        .wc-pred-explanation {{
+            font-size: 0.78rem;
+            color: var(--wc-muted);
+            line-height: 1.4;
+            flex: 1;
+            min-width: 120px;
+        }}
         @media (max-width: 640px) {{
             .wc-hero {{ padding: 1.25rem 1.25rem; }}
             .wc-hero-title {{ font-size: 1.6rem; }}
@@ -509,6 +610,84 @@ def render_group_card(group_name: str, standings_df: pd.DataFrame, highlight_n: 
 <div class="wc-group-stat">GD</div>
 <div class="wc-group-stat wc-group-points">Pts</div>
 </div>{rows_html}
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+# ── Match prediction card ────────────────────────────────────────────────────
+
+def render_prediction_card(
+    team_a: str,
+    team_b: str,
+    team_a_win: float,
+    draw: float,
+    team_b_win: float,
+    scoreline: str,
+    confidence: str,
+    explanation: str,
+    date: str | None = None,
+    group: str | None = None,
+) -> None:
+    """Render a single upcoming-match prediction as a styled card.
+
+    Parameters
+    ----------
+    team_a / team_b : Team names (used for flag lookup).
+    team_a_win / draw / team_b_win : Win probabilities (0-1, should sum to 1).
+    scoreline : Predicted score string, e.g. ``"1–0"``.
+    confidence : ``"High"``, ``"Medium"``, or ``"Low"``.
+    explanation : One-sentence model explanation to show below the card.
+    date / group : Optional metadata shown in the card header.
+    """
+    # Highlight the cell for the outcome with the highest probability
+    a_is_fav = team_a_win >= draw and team_a_win >= team_b_win
+    d_is_fav = draw > team_a_win and draw >= team_b_win
+    b_is_fav = not a_is_fav and not d_is_fav
+
+    a_cell = "wc-pred-prob-cell wc-pred-prob-cell-highlight" if a_is_fav else "wc-pred-prob-cell"
+    d_cell = "wc-pred-prob-cell wc-pred-prob-cell-highlight" if d_is_fav else "wc-pred-prob-cell"
+    b_cell = "wc-pred-prob-cell wc-pred-prob-cell-highlight" if b_is_fav else "wc-pred-prob-cell"
+
+    conf_class = {
+        "High": "wc-pred-confidence-high",
+        "Medium": "wc-pred-confidence-medium",
+    }.get(confidence, "wc-pred-confidence-low")
+    conf_icon = {"High": "●", "Medium": "◑"}.get(confidence, "○")
+
+    meta_bits = [
+        f"Group {group}" if group else None,
+        date if date else None,
+    ]
+    meta_html = (
+        '<div class="wc-pred-meta">'
+        + "".join(
+            f'<span>{b}</span><span style="color:rgba(255,255,255,0.2)">·</span>'
+            for b in meta_bits
+            if b
+        ).rstrip('<span style="color:rgba(255,255,255,0.2)">·</span>')
+        + "</div>"
+        if any(meta_bits)
+        else ""
+    )
+
+    st.markdown(
+        f"""<div class="wc-card wc-pred-card">
+{meta_html}<div class="wc-pred-teams">
+<div class="wc-pred-team"><span class="wc-flag">{get_flag(team_a)}</span>{team_a}</div>
+<div class="wc-pred-vs">vs</div>
+<div class="wc-pred-team wc-pred-team-b">{team_b}<span class="wc-flag">{get_flag(team_b)}</span></div>
+</div>
+<div class="wc-pred-probs">
+<div class="{a_cell}"><div class="wc-pred-prob-label">{team_a}</div><div class="wc-pred-prob-value">{team_a_win:.0%}</div></div>
+<div class="{d_cell}"><div class="wc-pred-prob-label">Draw</div><div class="wc-pred-prob-value">{draw:.0%}</div></div>
+<div class="{b_cell}"><div class="wc-pred-prob-label">{team_b}</div><div class="wc-pred-prob-value">{team_b_win:.0%}</div></div>
+</div>
+<div class="wc-pred-footer">
+<span class="wc-pred-scoreline">⚽ {scoreline}</span>
+<span class="{conf_class}">{conf_icon} {confidence} confidence</span>
+<span class="wc-pred-explanation">{explanation}</span>
+</div>
 </div>""",
         unsafe_allow_html=True,
     )

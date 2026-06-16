@@ -60,7 +60,8 @@ world-cup-ai-simulator/
 │   │   ├── poisson_model.py        # Bivariate Poisson / Dixon-Coles model
 │   │   └── match_predictor.py      # Ensemble blending ELO + Poisson
 │   ├── simulation/
-│   │   └── tournament_simulator.py # Full group + knockout Monte Carlo engine
+│   │   ├── tournament_simulator.py # Full group + knockout Monte Carlo engine
+│   │   └── game_predictions.py     # Deterministic per-match predictions for upcoming fixtures
 │   ├── genai/
 │   │   ├── analyst_agent.py        # Claude API integration
 │   │   └── prompt_templates.py     # Structured prompts (data-in → narration-out)
@@ -105,6 +106,33 @@ ANTHROPIC_API_KEY = "sk-ant-..."
 ```bash
 .venv/bin/streamlit run src/app/streamlit_app.py
 ```
+
+---
+
+## Dashboard tabs
+
+| Tab | What it shows |
+|-----|--------------|
+| **Live Scorecard** | Real-time scores for today's matches |
+| **Live Tournament Tracker** | Group standings, updated win probabilities, and biggest movers — plus a "Next Predicted Matches" preview showing the next 3 upcoming fixtures |
+| **Game Predictions** | Model-based predictions for every upcoming group-stage fixture, with filters by group, team, and date |
+| **Tournament Results** | Full archive of completed matches |
+| **Tournament Simulator** | Monte Carlo simulator (up to 20 000 runs) with top-3 champion cards |
+| **Team Deep-Dive** | Per-team stats, recent form, and AI tournament outlook |
+| **Group Analysis** | Head-to-head intra-group predictions and Claude group summaries |
+
+### Game Predictions tab
+
+The **Game Predictions** page shows model-based estimates for every remaining scheduled fixture.  For each match it displays:
+
+- Win / draw / loss probabilities for both teams
+- Most likely scoreline (derived from the Poisson expected-goals model)
+- Confidence tier — **High** (favourite > 60%), **Medium** (> 50%), or **Low** (close match)
+- A one-sentence explanation grounded in the teams' Elo ratings
+
+> **Important:** these are statistical model estimates, not live betting odds or expert tips.
+> The ELO + Poisson ensemble is calibrated on historical international results; upsets happen,
+> and the model does not account for injuries, suspensions, or tactical changes on match day.
 
 ### 4. Run the tests
 

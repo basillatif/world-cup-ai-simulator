@@ -26,8 +26,10 @@ from src.app.ui_components import (
     render_hero_header,
     render_match_card,
     render_metric_card,
+    render_prediction_card,
     render_probability_bar,
 )
+from src.simulation.game_predictions import predict_upcoming_matches
 from src.data.load_data import load_groups, load_matches, load_teams
 from src.data.results_updater import fetch_and_merge_results
 from src.genai.analyst_agent import MODEL as CLAUDE_MODEL
@@ -132,6 +134,7 @@ page = st.sidebar.radio(
     [
         "Live Scorecard",
         "Live Tournament Tracker",
+        "Game Predictions",
         "Tournament Results",
         "Tournament Simulator",
         "Team Deep-Dive",
@@ -300,6 +303,32 @@ def render_live_tournament_tracker() -> None:
             ).map(highlight_change, subset=["advance_prob_change", "title_prob_change"])
             st.dataframe(styled, use_container_width=True, hide_index=True)
 
+    # ── Next Predicted Matches preview ────────────────────────────────────────
+    st.divider()
+    st.subheader("🔮 Next Predicted Matches")
+    upcoming_preview = predict_upcoming_matches(results_df, predictor, teams_df)
+    if upcoming_preview.empty:
+        st.info("No upcoming matches found in the schedule.")
+    else:
+        preview_rows = upcoming_preview.head(3)
+        cols = st.columns(len(preview_rows))
+        for col, (_, row) in zip(cols, preview_rows.iterrows()):
+            date_str = row["date"].strftime("%b %d") if pd.notna(row["date"]) else ""
+            with col:
+                render_prediction_card(
+                    team_a=row["team_a"],
+                    team_b=row["team_b"],
+                    team_a_win=row["team_a_win"],
+                    draw=row["draw"],
+                    team_b_win=row["team_b_win"],
+                    scoreline=row["scoreline"],
+                    confidence=row["confidence"],
+                    explanation=row["explanation"],
+                    date=date_str,
+                    group=row["group"],
+                )
+        st.caption("📊 Open **Game Predictions** in the sidebar for filters and the full upcoming schedule.")
+
 
 @st.cache_data(show_spinner=False)
 def generate_group_analysis_live(
@@ -444,6 +473,115 @@ elif page == "Live Scorecard":
 
 elif page == "Live Tournament Tracker":
     render_live_tournament_tracker()
+
+
+# ── Page: Game Predictions ────────────────────────────────────────────────────
+
+elif page == "Game Predictions":
+    st.header("Game Predictions")
+    st.caption(
+        "Model-based estimates for every upcoming group-stage fixture. "
+        "Probabilities are derived from the ELO + Poisson ensemble — "
+        "these are statistical estimates, not live betting odds."
+    )
+
+    all_predictions = predict_upcoming_matches(results_df, predictor, teams_df)
+
+    if all_predictions.empty:
+        st.info("No upcoming matches found. All scheduled fixtures may have been played.")
+    else:
+        # ── Filters ───────────────────────────────────────────────────────────
+        with st.expander("🔍 Filters", expanded=True):
+            filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+            all_groups = sorted(all_predictions["group"].dropna().unique())
+            selected_groups = filter_col1.multiselect(
+                "Group", options=all_groups, default=all_groups, key="pred_groups"
+            )
+
+            all_pred_teams = sorted(
+                set(all_predictions["team_a"].tolist() + all_predictions["team_b"].tolist())
+            )
+            selected_team = filter_col2.selectbox(
+                "Team (any side)", options=["All teams"] + all_pred_teams, key="pred_team"
+            )
+
+            date_mode = filter_col3.radio(
+                "Date range",
+                ["Upcoming only", "All scheduled"],
+                horizontal=True,
+                key="pred_date_mode",
+            )
+
+        # ── Apply filters ─────────────────────────────────────────────────────
+        filtered = all_predictions.copy()
+
+        if selected_groups:
+            filtered = filtered[filtered["group"].isin(selected_groups)]
+
+        if selected_team != "All teams":
+            filtered = filtered[
+                (filtered["team_a"] == selected_team) | (filtered["team_b"] == selected_team)
+            ]
+
+        if date_mode == "Upcoming only":
+            today = pd.Timestamp.now().normalize()
+            filtered = filtered[filtered["date"].isna() | (filtered["date"] >= today)]
+
+        st.markdown(
+            f"**{len(filtered)}** upcoming match{'es' if len(filtered) != 1 else ''} "
+            f"{'(filtered)' if len(filtered) < len(all_predictions) else ''}"
+        )
+
+        if filtered.empty:
+            st.info("No matches match the current filters.")
+        else:
+            # ── Render cards two per row ──────────────────────────────────────
+            rows_list = list(filtered.iterrows())
+            for i in range(0, len(rows_list), 2):
+                card_cols = st.columns(2)
+                for col, (_, row) in zip(card_cols, rows_list[i : i + 2]):
+                    date_str = row["date"].strftime("%b %d, %Y") if pd.notna(row["date"]) else ""
+                    with col:
+                        render_prediction_card(
+                            team_a=row["team_a"],
+                            team_b=row["team_b"],
+                            team_a_win=row["team_a_win"],
+                            draw=row["draw"],
+                            team_b_win=row["team_b_win"],
+                            scoreline=row["scoreline"],
+                            confidence=row["confidence"],
+                            explanation=row["explanation"],
+                            date=date_str,
+                            group=row["group"],
+                        )
+
+        # ── Full data table toggle ─────────────────────────────────────────────
+        with st.expander("View as table"):
+            display_table = filtered.copy()
+            display_table["Date"] = display_table["date"].dt.strftime("%b %d, %Y")
+            display_table["Match"] = display_table["team_a"] + " vs " + display_table["team_b"]
+            display_table = display_table.rename(
+                columns={
+                    "group": "Group",
+                    "team_a_win": "Team A Win",
+                    "draw": "Draw",
+                    "team_b_win": "Team B Win",
+                    "scoreline": "Scoreline",
+                    "confidence": "Confidence",
+                    "explanation": "Explanation",
+                }
+            )
+            st.dataframe(
+                display_table[
+                    ["Date", "Group", "Match", "Team A Win", "Draw", "Team B Win",
+                     "Scoreline", "Confidence", "Explanation"]
+                ].style.format(
+                    {"Team A Win": "{:.1%}", "Draw": "{:.1%}", "Team B Win": "{:.1%}"}
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
 
 
 # ── Page: Tournament Results ──────────────────────────────────────────────────
