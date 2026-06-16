@@ -9,12 +9,12 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-14,Group,D,Australia,Turkey,2,0,Australia,Final
 2026-06-14,Group,E,Germany,Curacao,7,1,Germany,Final
 2026-06-14,Group,F,Netherlands,Japan,2,2,Draw,Final
-2026-06-14,Group,E,Ivory Coast,Ecuador,,,,Scheduled
+2026-06-14,Group,E,Ivory Coast,Ecuador,1,0,Ivory Coast,Final
 2026-06-15,Group,F,Sweden,Tunisia,5,1,Sweden,Final
-2026-06-15,Group,H,Spain,Cape Verde,,,,Scheduled
-2026-06-15,Group,G,Belgium,Egypt,,,,Scheduled
-2026-06-15,Group,H,Saudi Arabia,Uruguay,,,,Scheduled
-2026-06-16,Group,G,Iran,New Zealand,,,,Scheduled
+2026-06-15,Group,H,Spain,Cape Verde,0,0,Draw,Final
+2026-06-15,Group,G,Belgium,Egypt,1,1,Draw,Final
+2026-06-15,Group,H,Saudi Arabia,Uruguay,1,1,Draw,Final
+2026-06-16,Group,G,Iran,New Zealand,2,2,Draw,Final
 2026-06-16,Group,I,France,Senegal,,,,Scheduled
 2026-06-16,Group,I,Iraq,Norway,,,,Scheduled
 2026-06-17,Group,J,Argentina,Algeria,,,,Scheduled
@@ -22,10 +22,10 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-17,Group,K,Portugal,DR Congo,,,,Scheduled
 2026-06-17,Group,L,England,Croatia,,,,Scheduled
 2026-06-17,Group,L,Ghana,Panama,,,,Scheduled
-2026-06-18,Group,A,Czechia,South Africa,,,,Scheduled
-2026-06-18,Group,K,Uzbekistan,Colombia,,,,Scheduled
 2026-06-18,Group,B,Canada,Qatar,,,,Scheduled
 2026-06-18,Group,B,Switzerland,Bosnia and Herzegovina,,,,Scheduled
+2026-06-18,Group,K,Uzbekistan,Colombia,,,,Scheduled
+2026-06-18,Group,A,Czechia,South Africa,,,,Scheduled
 2026-06-19,Group,A,Mexico,South Korea,,,,Scheduled
 2026-06-19,Group,D,United States,Australia,,,,Scheduled
 2026-06-19,Group,C,Scotland,Morocco,,,,Scheduled
@@ -33,41 +33,41 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-20,Group,D,Turkey,Paraguay,,,,Scheduled
 2026-06-20,Group,F,Netherlands,Sweden,,,,Scheduled
 2026-06-20,Group,E,Germany,Ivory Coast,,,,Scheduled
-2026-06-21,Group,E,Ecuador,Curacao,,,,Scheduled
+2026-06-21,Group,H,Uruguay,Cape Verde,,,,Scheduled
 2026-06-21,Group,F,Tunisia,Japan,,,,Scheduled
 2026-06-21,Group,H,Spain,Saudi Arabia,,,,Scheduled
 2026-06-21,Group,G,Belgium,Iran,,,,Scheduled
-2026-06-21,Group,H,Uruguay,Cape Verde,,,,Scheduled
+2026-06-21,Group,E,Ecuador,Curacao,,,,Scheduled
 2026-06-22,Group,G,New Zealand,Egypt,,,,Scheduled
 2026-06-22,Group,J,Argentina,Austria,,,,Scheduled
 2026-06-22,Group,I,France,Iraq,,,,Scheduled
-2026-06-23,Group,L,Panama,Croatia,,,,Scheduled
-2026-06-23,Group,K,Portugal,Uzbekistan,,,,Scheduled
 2026-06-23,Group,L,England,Ghana,,,,Scheduled
-2026-06-23,Group,I,Norway,Senegal,,,,Scheduled
+2026-06-23,Group,L,Panama,Croatia,,,,Scheduled
 2026-06-23,Group,J,Jordan,Algeria,,,,Scheduled
+2026-06-23,Group,K,Portugal,Uzbekistan,,,,Scheduled
+2026-06-23,Group,I,Norway,Senegal,,,,Scheduled
 2026-06-24,Group,K,Colombia,DR Congo,,,,Scheduled
 2026-06-24,Group,B,Switzerland,Canada,,,,Scheduled
 2026-06-24,Group,B,Bosnia and Herzegovina,Qatar,,,,Scheduled
 2026-06-24,Group,C,Morocco,Haiti,,,,Scheduled
 2026-06-24,Group,C,Scotland,Brazil,,,,Scheduled
-2026-06-25,Group,A,Czechia,Mexico,,,,Scheduled
+2026-06-25,Group,F,Tunisia,Netherlands,,,,Scheduled
 2026-06-25,Group,A,South Africa,South Korea,,,,Scheduled
 2026-06-25,Group,E,Ecuador,Germany,,,,Scheduled
 2026-06-25,Group,E,Curacao,Ivory Coast,,,,Scheduled
-2026-06-25,Group,F,Tunisia,Netherlands,,,,Scheduled
+2026-06-25,Group,A,Czechia,Mexico,,,,Scheduled
 2026-06-25,Group,F,Japan,Sweden,,,,Scheduled
 2026-06-26,Group,D,Turkey,United States,,,,Scheduled
 2026-06-26,Group,D,Paraguay,Australia,,,,Scheduled
 2026-06-26,Group,I,Norway,France,,,,Scheduled
 2026-06-26,Group,I,Senegal,Iraq,,,,Scheduled
+2026-06-27,Group,L,Croatia,Ghana,,,,Scheduled
+2026-06-27,Group,K,Colombia,Portugal,,,,Scheduled
+2026-06-27,Group,H,Uruguay,Spain,,,,Scheduled
 2026-06-27,Group,H,Cape Verde,Saudi Arabia,,,,Scheduled
 2026-06-27,Group,G,New Zealand,Belgium,,,,Scheduled
 2026-06-27,Group,G,Egypt,Iran,,,,Scheduled
 2026-06-27,Group,L,Panama,England,,,,Scheduled
-2026-06-27,Group,L,Croatia,Ghana,,,,Scheduled
-2026-06-27,Group,K,Colombia,Portugal,,,,Scheduled
-2026-06-27,Group,H,Uruguay,Spain,,,,Scheduled
 2026-06-27,Group,K,DR Congo,Uzbekistan,,,,Scheduled
 2026-06-28,Group,J,Jordan,Argentina,,,,Scheduled
 2026-06-28,Group,J,Algeria,Austria,,,,Scheduled
