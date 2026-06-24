@@ -21,6 +21,9 @@ env/
 # API keys
 api_keys/
 
+# Passwords
+Passwords/
+
 # Data – raw/processed (keep sample data)
 data/raw/*
 data/processed/*
