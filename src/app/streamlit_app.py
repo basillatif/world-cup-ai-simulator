@@ -136,7 +136,6 @@ page = st.sidebar.radio(
         "Live Tournament Tracker",
         "Game Predictions",
         "Tournament Results",
-        "Tournament Simulator",
         "Team Deep-Dive",
         "Group Analysis",
     ],
@@ -620,55 +619,6 @@ elif page == "Tournament Results":
         )
 
 
-# ── Page: Tournament Simulator ────────────────────────────────────────────────
-
-elif page == "Tournament Simulator":
-    st.header("Monte Carlo Tournament Simulator")
-
-    n_sims = st.slider("Number of simulations", 1_000, 20_000, 5_000, step=1_000,
-                        help="~0.7s per 1 000 sims. 5 000 gives stable results in ~3.5s.")
-    seed = st.number_input("Random seed", value=42, min_value=0)
-
-    if st.button("Run Simulation", type="primary"):
-        with st.spinner(f"Running {n_sims:,} simulations..."):
-            results = run_monte_carlo(
-                groups_df=groups_df,
-                predictor=predictor,
-                n_simulations=n_sims,
-                seed=int(seed),
-                completed_results_df=results_df,
-            )
-            saved_predictions = save_predictions(results, seed=int(seed))
-        st.session_state["sim_results"] = results
-        st.session_state["saved_predictions"] = saved_predictions
-        st.success(f"Done! {n_sims:,} tournaments simulated.")
-        st.caption(
-            "Saved locally to "
-            f"`pre-wc-predictions/{saved_predictions['json'].name}` and "
-            f"`pre-wc-predictions/{saved_predictions['csv'].name}`."
-        )
-
-    if "sim_results" in st.session_state:
-        results = st.session_state["sim_results"]
-        top3 = results["top_contenders"][:3]
-
-        st.subheader("🏆 Top 3 Most Likely Winners")
-        champion_team, champion_probs = top3[0]
-        render_champion_card(champion_team, champion_probs["champion"])
-
-        cols = st.columns(2)
-        for col, label, icon, (team, p) in zip(
-            cols, ["2nd Most Likely", "3rd Most Likely"], ["🥈", "🥉"], top3[1:]
-        ):
-            with col:
-                render_metric_card(
-                    label=label,
-                    value=f"{get_flag(team)} {team}",
-                    icon=icon,
-                    help_text=f"{p['champion'] * 100:.1f}% win probability",
-                )
-
-
 # ── Page: Team Deep-Dive ──────────────────────────────────────────────────────
 
 elif page == "Team Deep-Dive":
@@ -746,4 +696,4 @@ elif page == "Team Deep-Dive":
                 except Exception as e:
                     st.error(f"Claude API error: {e}")
     elif "sim_results" not in st.session_state:
-        st.info("Run the Tournament Simulator first to unlock the AI outlook.")
+        st.info("Run a simulation first to unlock the AI outlook.")
