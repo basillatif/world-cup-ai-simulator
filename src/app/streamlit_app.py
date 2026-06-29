@@ -14,6 +14,7 @@ import streamlit as st
 from knockout_bracket import R32_SEEDING, simulate_bracket
 from knockout_engine import knockout_match_fn
 from knockout_results import build_decided, verify_seeding
+from src.app.navigation import render_sidebar_navigation
 from src.app.ui_components import apply_custom_theme, get_flag, render_probability_bar
 from src.data.load_data import load_results
 from src.data.results_updater import (
@@ -76,6 +77,7 @@ def render() -> None:
         initial_sidebar_state="expanded",
     )
     apply_custom_theme()
+    render_sidebar_navigation()
 
     st.title("Knockout Bracket")
     st.caption("Road to the Final")

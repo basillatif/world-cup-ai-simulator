@@ -43,18 +43,41 @@ def _current_predictor() -> MatchPredictor:
     return MatchPredictor(elo=elo, poisson=poisson)
 
 
-def knockout_match_fn(team_a: str, team_b: str, rng: np.random.Generator) -> str:
+@lru_cache(maxsize=None)
+def _pair_model(team_a: str, team_b: str) -> tuple[float, float, float, float, float]:
     predictor = _current_predictor()
-    ninety = predictor.simulate_match(team_a, team_b, neutral=True, rng=rng)
+    probs = predictor.predict_probs(team_a, team_b, neutral=True)
+    lam_a, lam_b = predictor.poisson.expected_goals(team_a, team_b, neutral=True)
+    return probs["home_win"], probs["draw"], probs["away_win"], lam_a, lam_b
 
-    goals_a = int(ninety["home_goals"])
-    goals_b = int(ninety["away_goals"])
+
+def _sample_group_style_score(
+    outcome: str,
+    lam_a: float,
+    lam_b: float,
+    rng: np.random.Generator,
+) -> tuple[int, int]:
+    while True:
+        goals_a = int(rng.poisson(lam_a))
+        goals_b = int(rng.poisson(lam_b))
+        simulated_outcome = (
+            "home_win" if goals_a > goals_b else ("draw" if goals_a == goals_b else "away_win")
+        )
+        if simulated_outcome == outcome:
+            return goals_a, goals_b
+
+
+def knockout_match_fn(team_a: str, team_b: str, rng: np.random.Generator) -> str:
+    home_win, draw, away_win, lam_a, lam_b = _pair_model(team_a, team_b)
+    raw = np.array([home_win, draw, away_win], dtype=float)
+    raw /= raw.sum()
+    outcome = str(rng.choice(["home_win", "draw", "away_win"], p=raw))
+    goals_a, goals_b = _sample_group_style_score(outcome, lam_a, lam_b, rng)
     if goals_a > goals_b:
         return team_a
     if goals_b > goals_a:
         return team_b
 
-    lam_a, lam_b = predictor.poisson.expected_goals(team_a, team_b, neutral=True)
     extra_a = int(rng.poisson(lam_a / 3.0))
     extra_b = int(rng.poisson(lam_b / 3.0))
     if extra_a > extra_b:

@@ -36,7 +36,8 @@ data/processed/*
 htmlcov/
 
 # Streamlit
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
 
 # macOS
 .DS_Store

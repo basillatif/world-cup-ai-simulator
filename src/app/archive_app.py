@@ -29,6 +29,7 @@ from src.app.ui_components import (
     render_prediction_card,
     render_probability_bar,
 )
+from src.app.navigation import render_sidebar_navigation
 from src.simulation.game_predictions import predict_upcoming_matches
 from src.data.load_data import load_groups, load_matches, load_teams
 from src.data.results_updater import fetch_and_merge_results
@@ -50,6 +51,7 @@ from src.simulation.tournament_simulator import run_monte_carlo
 # ── Page config ──────────────────────────────────────────────────────────────
 
 apply_custom_theme()
+render_sidebar_navigation()
 
 render_hero_header(subtitle="Monte Carlo Tournament Simulations & Live Probability Tracking")
 st.caption(
