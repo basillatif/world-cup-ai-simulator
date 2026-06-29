@@ -66,7 +66,9 @@ def normalize_results(results_df: pd.DataFrame) -> pd.DataFrame:
         df["score_a"] > df["score_b"],
         df["team_b"].where(df["score_b"] > df["score_a"], "Draw"),
     )
-    df.loc[final_mask, "winner"] = calculated_winner[final_mask]
+    missing_winner = df["winner"].isna() | df["winner"].astype(str).str.strip().eq("")
+    fill_mask = final_mask & missing_winner
+    df.loc[fill_mask, "winner"] = calculated_winner[fill_mask]
     return df[RESULT_COLUMNS].sort_values("date", na_position="last").reset_index(drop=True)
 
 
