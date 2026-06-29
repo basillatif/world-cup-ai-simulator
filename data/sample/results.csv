@@ -6,10 +6,10 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-13,Group,B,Qatar,Switzerland,1,1,Draw,Final
 2026-06-13,Group,C,Morocco,Brazil,1,1,Draw,Final
 2026-06-13,Group,C,Haiti,Scotland,0,1,Scotland,Final
-2026-06-14,Group,E,Ivory Coast,Ecuador,1,0,Ivory Coast,Final
-2026-06-14,Group,F,Netherlands,Japan,2,2,Draw,Final
 2026-06-14,Group,D,Australia,Turkey,2,0,Australia,Final
 2026-06-14,Group,E,Germany,Curacao,7,1,Germany,Final
+2026-06-14,Group,F,Netherlands,Japan,2,2,Draw,Final
+2026-06-14,Group,E,Ivory Coast,Ecuador,1,0,Ivory Coast,Final
 2026-06-15,Group,F,Sweden,Tunisia,5,1,Sweden,Final
 2026-06-15,Group,H,Spain,Cape Verde,0,0,Draw,Final
 2026-06-15,Group,G,Belgium,Egypt,1,1,Draw,Final
@@ -17,11 +17,11 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-16,Group,I,Iraq,Norway,1,4,Norway,Final
 2026-06-16,Group,G,Iran,New Zealand,2,2,Draw,Final
 2026-06-16,Group,I,France,Senegal,3,1,France,Final
-2026-06-17,Group,L,Ghana,Panama,1,0,Ghana,Final
-2026-06-17,Group,K,Portugal,DR Congo,1,1,Draw,Final
 2026-06-17,Group,L,England,Croatia,4,2,England,Final
-2026-06-17,Group,J,Argentina,Algeria,3,0,Argentina,Final
+2026-06-17,Group,L,Ghana,Panama,1,0,Ghana,Final
 2026-06-17,Group,J,Austria,Jordan,3,1,Austria,Final
+2026-06-17,Group,K,Portugal,DR Congo,1,1,Draw,Final
+2026-06-17,Group,J,Argentina,Algeria,3,0,Argentina,Final
 2026-06-18,Group,K,Uzbekistan,Colombia,1,3,Colombia,Final
 2026-06-18,Group,A,Czechia,South Africa,1,1,Draw,Final
 2026-06-18,Group,B,Switzerland,Bosnia and Herzegovina,4,1,Switzerland,Final
@@ -29,10 +29,10 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-19,Group,A,Mexico,South Korea,1,0,Mexico,Final
 2026-06-19,Group,D,United States,Australia,2,0,United States,Final
 2026-06-19,Group,C,Scotland,Morocco,0,1,Morocco,Final
+2026-06-20,Group,D,Turkey,Paraguay,0,1,Paraguay,Final
+2026-06-20,Group,F,Netherlands,Sweden,5,1,Netherlands,Final
 2026-06-20,Group,C,Brazil,Haiti,3,0,Brazil,Final
 2026-06-20,Group,E,Germany,Ivory Coast,2,1,Germany,Final
-2026-06-20,Group,F,Netherlands,Sweden,5,1,Netherlands,Final
-2026-06-20,Group,D,Turkey,Paraguay,0,1,Paraguay,Final
 2026-06-21,Group,E,Ecuador,Curacao,0,0,Draw,Final
 2026-06-21,Group,H,Spain,Saudi Arabia,4,0,Spain,Final
 2026-06-21,Group,G,Belgium,Iran,0,0,Draw,Final
@@ -41,37 +41,37 @@ date,stage,group,team_a,team_b,score_a,score_b,winner,status
 2026-06-22,Group,G,New Zealand,Egypt,1,3,Egypt,Final
 2026-06-22,Group,J,Argentina,Austria,2,0,Argentina,Final
 2026-06-22,Group,I,France,Iraq,3,0,France,Final
-2026-06-23,Group,I,Norway,Senegal,3,2,Norway,Final
+2026-06-23,Group,L,England,Ghana,0,0,Draw,Final
 2026-06-23,Group,K,Portugal,Uzbekistan,5,0,Portugal,Final
 2026-06-23,Group,L,Panama,Croatia,0,1,Croatia,Final
 2026-06-23,Group,J,Jordan,Algeria,1,2,Algeria,Final
-2026-06-23,Group,L,England,Ghana,0,0,Draw,Final
+2026-06-23,Group,I,Norway,Senegal,3,2,Norway,Final
 2026-06-24,Group,K,Colombia,DR Congo,1,0,Colombia,Final
 2026-06-24,Group,B,Switzerland,Canada,2,1,Switzerland,Final
 2026-06-24,Group,B,Bosnia and Herzegovina,Qatar,3,1,Bosnia and Herzegovina,Final
 2026-06-24,Group,C,Morocco,Haiti,4,2,Morocco,Final
 2026-06-24,Group,C,Scotland,Brazil,0,3,Brazil,Final
-2026-06-25,Group,A,South Africa,South Korea,1,0,South Africa,Final
-2026-06-25,Group,F,Tunisia,Netherlands,1,3,Netherlands,Final
-2026-06-25,Group,F,Japan,Sweden,1,1,Draw,Final
 2026-06-25,Group,E,Curacao,Ivory Coast,0,2,Ivory Coast,Final
-2026-06-25,Group,A,Czechia,Mexico,0,3,Mexico,Final
 2026-06-25,Group,E,Ecuador,Germany,2,1,Ecuador,Final
+2026-06-25,Group,A,Czechia,Mexico,0,3,Mexico,Final
+2026-06-25,Group,A,South Africa,South Korea,1,0,South Africa,Final
+2026-06-25,Group,F,Japan,Sweden,1,1,Draw,Final
+2026-06-25,Group,F,Tunisia,Netherlands,1,3,Netherlands,Final
 2026-06-26,Group,D,Turkey,United States,3,2,Turkey,Final
 2026-06-26,Group,D,Paraguay,Australia,0,0,Draw,Final
 2026-06-26,Group,I,Norway,France,1,4,France,Final
 2026-06-26,Group,I,Senegal,Iraq,5,0,Senegal,Final
-2026-06-27,Group,G,New Zealand,Belgium,1,5,Belgium,Final
-2026-06-27,Group,K,DR Congo,Uzbekistan,3,1,DR Congo,Final
-2026-06-27,Group,G,Egypt,Iran,1,1,Draw,Final
-2026-06-27,Group,H,Cape Verde,Saudi Arabia,0,0,Draw,Final
+2026-06-27,Group,H,Uruguay,Spain,0,1,Spain,Final
 2026-06-27,Group,K,Colombia,Portugal,0,0,Draw,Final
 2026-06-27,Group,L,Croatia,Ghana,2,1,Croatia,Final
 2026-06-27,Group,L,Panama,England,0,2,England,Final
-2026-06-27,Group,H,Uruguay,Spain,0,1,Spain,Final
+2026-06-27,Group,G,New Zealand,Belgium,1,5,Belgium,Final
+2026-06-27,Group,H,Cape Verde,Saudi Arabia,0,0,Draw,Final
+2026-06-27,Group,K,DR Congo,Uzbekistan,3,1,DR Congo,Final
+2026-06-27,Group,G,Egypt,Iran,1,1,Draw,Final
 2026-06-28,Group,J,Jordan,Argentina,1,3,Argentina,Final
 2026-06-28,Group,J,Algeria,Austria,3,3,Draw,Final
-2026-06-28,Group,A,South Africa,Canada,,,,Scheduled
+2026-06-28,Group,A,South Africa,Canada,0,1,Canada,Final
 2026-06-29,Group,C,Brazil,Japan,,,,Scheduled
 2026-06-29,Group,E,Germany,Paraguay,,,,Scheduled
 2026-06-30,Group,F,Netherlands,Morocco,,,,Scheduled
