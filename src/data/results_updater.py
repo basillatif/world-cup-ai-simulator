@@ -18,6 +18,7 @@ from typing import Any
 import pandas as pd
 import requests
 
+from knockout_bracket import R32_SEEDING
 from src.data.load_data import load_groups
 from src.data.sync_results import STAGE_MAP, _group_for_team, _team_name
 from src.simulation.live_tracker import RESULT_COLUMNS, normalize_results
@@ -47,23 +48,17 @@ def fetch_latest_world_cup_results() -> pd.DataFrame:
     raise ResultsFetchError(f"Unsupported RESULTS_PROVIDER: {provider!r}")
 
 
+def fetch_latest_world_cup_matches_payload() -> list[dict[str, Any]]:
+    provider = os.environ.get("RESULTS_PROVIDER", "").strip().lower()
+    if not provider:
+        raise ResultsFetchError("RESULTS_PROVIDER is not configured")
+    if provider != "football-data":
+        raise ResultsFetchError(f"Unsupported RESULTS_PROVIDER: {provider!r}")
+    return _fetch_football_data_payload()
+
+
 def _fetch_football_data() -> pd.DataFrame:
-    api_key = os.environ.get("RESULTS_API_KEY")
-    if not api_key:
-        raise ResultsFetchError("RESULTS_API_KEY is not configured")
-    base_url = (os.environ.get("RESULTS_API_URL") or FOOTBALL_DATA_BASE_URL).rstrip("/")
-
-    try:
-        response = requests.get(
-            f"{base_url}/competitions/WC/matches",
-            headers={"X-Auth-Token": api_key},
-            timeout=10,
-        )
-        response.raise_for_status()
-        matches = response.json().get("matches", [])
-    except (requests.RequestException, ValueError) as exc:
-        raise ResultsFetchError(f"football-data request failed: {exc}") from exc
-
+    matches = _fetch_football_data_payload()
     if not matches:
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
@@ -78,6 +73,24 @@ def _fetch_football_data() -> pd.DataFrame:
     return normalize_results(pd.DataFrame(rows))
 
 
+def _fetch_football_data_payload() -> list[dict[str, Any]]:
+    api_key = os.environ.get("RESULTS_API_KEY")
+    if not api_key:
+        raise ResultsFetchError("RESULTS_API_KEY is not configured")
+    base_url = (os.environ.get("RESULTS_API_URL") or FOOTBALL_DATA_BASE_URL).rstrip("/")
+
+    try:
+        response = requests.get(
+            f"{base_url}/competitions/WC/matches",
+            headers={"X-Auth-Token": api_key},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json().get("matches", [])
+    except (requests.RequestException, ValueError) as exc:
+        raise ResultsFetchError(f"football-data request failed: {exc}") from exc
+
+
 def _football_data_match_to_row(match: dict[str, Any], groups_df: pd.DataFrame) -> dict[str, Any]:
     team_a = _team_name(match.get("homeTeam"))
     team_b = _team_name(match.get("awayTeam"))
@@ -86,12 +99,7 @@ def _football_data_match_to_row(match: dict[str, Any], groups_df: pd.DataFrame) 
 
     if match.get("status") == "FINISHED" and score_a is not None and score_b is not None:
         status = "Final"
-        if score_a > score_b:
-            winner = team_a
-        elif score_b > score_a:
-            winner = team_b
-        else:
-            winner = "Draw"
+        winner = _football_data_progression_winner(match, team_a, team_b, score_a, score_b)
     else:
         status, score_a, score_b, winner = "Scheduled", None, None, None
 
@@ -106,6 +114,92 @@ def _football_data_match_to_row(match: dict[str, Any], groups_df: pd.DataFrame) 
         "winner": winner,
         "status": status,
     }
+
+
+def _football_data_progression_winner(
+    match: dict[str, Any],
+    team_a: str,
+    team_b: str,
+    score_a: int,
+    score_b: int,
+) -> str:
+    winner = match.get("score", {}).get("winner")
+    if winner == "HOME_TEAM":
+        return team_a
+    if winner == "AWAY_TEAM":
+        return team_b
+    if winner == "DRAW":
+        return "Draw"
+    if score_a > score_b:
+        return team_a
+    if score_b > score_a:
+        return team_b
+    return "Draw"
+
+
+def _raw_team_name(team: dict[str, Any] | None) -> str:
+    if not team:
+        return "TBD"
+    return str(team.get("name") or team.get("shortName") or "TBD")
+
+
+def _stage_team_set(matches: list[dict[str, Any]]) -> set[str]:
+    teams: set[str] = set()
+    for match in matches:
+        for side in ("homeTeam", "awayTeam"):
+            raw = _raw_team_name(match.get(side))
+            teams.add(_team_name({"name": raw}))
+    return teams
+
+
+def _discover_round_of_32_stage(matches: list[dict[str, Any]]) -> str:
+    frozen = {team for pair in R32_SEEDING.values() for team in pair}
+    by_stage: dict[str, list[dict[str, Any]]] = {}
+    for match in matches:
+        if match.get("homeTeam", {}).get("name") and match.get("awayTeam", {}).get("name"):
+            by_stage.setdefault(str(match.get("stage", "")), []).append(match)
+
+    for stage, stage_matches in by_stage.items():
+        if len(stage_matches) == len(R32_SEEDING) and _stage_team_set(stage_matches) == frozen:
+            return stage
+    raise ResultsFetchError("Could not discover Round of 32 stage from live payload")
+
+
+def _football_data_match_id(match: dict[str, Any], fallback: int) -> int:
+    for key in ("matchday", "id"):
+        value = match.get(key)
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 73 <= number <= 104:
+            return number
+    return fallback
+
+
+def live_round_of_32_fixtures_from_payload(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    stage = _discover_round_of_32_stage(matches)
+    fixtures = [
+        match
+        for match in matches
+        if match.get("stage") == stage
+        and match.get("homeTeam", {}).get("name")
+        and match.get("awayTeam", {}).get("name")
+    ]
+    fixtures.sort(key=lambda match: (match.get("utcDate") or "", match.get("id") or 0))
+    return [
+        {
+            "match_id": _football_data_match_id(match, 73 + index),
+            "team_a": _raw_team_name(match.get("homeTeam")),
+            "team_b": _raw_team_name(match.get("awayTeam")),
+            "stage": stage,
+        }
+        for index, match in enumerate(fixtures)
+    ]
+
+
+def fetch_live_round_of_32_fixtures() -> list[dict[str, Any]]:
+    return live_round_of_32_fixtures_from_payload(fetch_latest_world_cup_matches_payload())
 
 
 # ---------------------------------------------------------------------------

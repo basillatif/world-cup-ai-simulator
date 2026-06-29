@@ -13,7 +13,14 @@ import streamlit as st
 
 from knockout_bracket import R32_SEEDING, simulate_bracket
 from knockout_engine import knockout_match_fn
+from knockout_results import build_decided, verify_seeding
 from src.app.ui_components import apply_custom_theme, get_flag, render_probability_bar
+from src.data.load_data import load_results
+from src.data.results_updater import (
+    ResultsFetchError,
+    fetch_and_merge_results,
+    fetch_live_round_of_32_fixtures,
+)
 
 
 FINISHED: dict[int, str] = {}
@@ -51,6 +58,16 @@ def r32_matchups() -> pd.DataFrame:
     )
 
 
+def load_conditioned_decisions() -> tuple[dict[int, str], str | None]:
+    latest_results = fetch_and_merge_results(load_results())
+    try:
+        live_r32_fixtures = fetch_live_round_of_32_fixtures()
+        verify_seeding(live_r32_fixtures)
+    except (ResultsFetchError, ValueError) as exc:
+        return FINISHED.copy(), str(exc)
+    return build_decided(latest_results), None
+
+
 def render() -> None:
     st.set_page_config(
         page_title="Road to the Final",
@@ -63,8 +80,15 @@ def render() -> None:
     st.title("Knockout Bracket")
     st.caption("Road to the Final")
 
+    decided, seeding_error = load_conditioned_decisions()
+    if seeding_error:
+        st.error(
+            "Live seeding integrity check failed. Running the frozen bracket "
+            f"without live-result conditioning. {seeding_error}"
+        )
+
     with st.spinner("Simulating the knockout bracket..."):
-        bracket = prepare_bracket_data()
+        bracket = prepare_bracket_data(decided=decided)
 
     leader = bracket.iloc[0]
     col1, col2, col3 = st.columns(3)
