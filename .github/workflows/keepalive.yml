@@ -1,0 +1,35 @@
+name: Keep Streamlit Awake
+
+# Apps with no traffic for 12h go to sleep, so visit every 6h (with slack for
+# GitHub's scheduler drift). manual run available via workflow_dispatch.
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+# Avoid overlapping runs if a previous one is slow.
+concurrency:
+  group: streamlit-keepalive
+  cancel-in-progress: true
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install chromium --with-deps
+
+      - name: Visit app
+        env:
+          # Set this in repo Settings -> Secrets and variables -> Actions -> Variables
+          STREAMLIT_URL: ${{ vars.STREAMLIT_URL }}
+        run: python scripts/keepalive.py
